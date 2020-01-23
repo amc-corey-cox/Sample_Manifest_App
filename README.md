@@ -1,0 +1,3 @@
+# Sample_Manifest_Script
+
+This script reads data from the supplied data-file and balances samples across chips and plates based on selected features with appropriate randomization. Currently, controls are in fixed locations and samples are only randomized within feature groups (not across chip locations). Eventually, I intend to implement robust sample and control randomization (optionally). When this process is sufficeintly robust I intend to develop it into a R-shiny app that can be used by anyone submitting samples to the CARGO core.

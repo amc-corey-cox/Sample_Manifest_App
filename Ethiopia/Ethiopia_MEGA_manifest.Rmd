@@ -1,0 +1,148 @@
+---
+title: "Ethiopia MEGA manifest"
+author: "Corey Cox"
+date: "12/13/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(tidyverse)
+library(readxl)
+library(xlsx)
+```
+
+```{r tools, echo = false}
+get_n_plates <- function (d) {
+  ceiling( nrow(d) / 91 )    # 96 well plate with 5 controls: 91 samples/plate
+}
+
+get_n_chips <- function (d) {
+  controls <- 5 * get_n_plates(d)         # five controls per plate
+  ceiling ( (nrow(d) + controls) / 8 )    # 8 samples per chip
+}
+
+add_column_na <- function(d, col_names) {
+  add_cols <- col_names[!col_names %in% names(d)]
+
+  if(length(add_cols) != 0) d[add_cols] <- NA
+  d
+}
+
+col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Well", "Sample Well", "Species",
+  "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
+  "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
+
+wells <- c("A01", "B01", "C01", "D01", "E01", "F01", "G01", "H01", "A02", "B02", "C02", "D02", "E02", "F02", "G02", "H02",
+  "A03", "B03", "C03", "D03", "E03", "F03", "G03", "H03", "A04", "B04", "C04", "D04", "E04", "F04", "G04", "H04", 
+  "A05", "B05", "C05", "D05", "E05", "F05", "G05", "H05", "A06", "B06", "C06", "D06", "E06", "F06", "G06", "H06",
+  "A07", "B07", "C07", "D07", "E07", "F07", "G07", "H07", "A08", "B08", "C08", "D08", "E08", "F08", "G08", "H08",
+  "A09", "B09", "C09", "D09", "E09", "F09", "G09", "H09", "A10", "B10", "C10", "D10", "E10", "F10", "G10", "H10",
+  "A11", "B11", "C11", "D11", "E11", "F11", "G11", "H11", "A12", "B12", "C12", "D12", "E12", "F12", "G12", "H12")
+```
+
+
+
+## Import data for Ethiopia
+
+```{r import_data}
+pheno_file <- "CAAPA2 Ethiopian_Saliva Samples Received_10282019_JWM.xlsx"
+pheno <- read_excel(pheno_file, sheet = "Sheet2") %>% drop_na(sample_id)
+
+by_cols <- c("Gender (", "Ethnic group")
+factored_pheno <- pheno %>% mutate_at(by_cols, as_factor)
+summary(factored_pheno[, by_cols])
+
+filtered_pheno <- factored_pheno %>% filter(`Ethnic group` != "Majang")
+summary(filtered_pheno[, by_cols])
+
+n_plates <- get_n_plates(filtered_pheno)
+n_chips<- get_n_chips(filtered_pheno)
+
+rm(factored_pheno, pheno, pheno_file)
+rm(get_n_chips, get_n_plates)
+```
+
+## Split samples into 2 plates and balance each chip
+
+```{r split_samples}
+set.seed(42)
+
+sampled_pheno <- filtered_pheno %>%
+  group_by(`Gender (`, `Ethnic group`) %>% nest() %>% ungroup() %>%     # Create nested table by gender & group
+  mutate(n = map(data, nrow) %>% flatten_dbl()) %>%                     # Calculate number of samples per set
+  mutate(samp = map(data, sample)) %>% select(-data) %>%                # Resample each set
+  arrange(-n) %>% unnest(c(samp))                                       # Arrange by set size, get samples
+
+# add HAPMAP's and Duplicates
+all_samples <- sampled_pheno %>%
+  add_row(sample_id = "HAPMAP Control", .before = 1) %>%
+  add_row(sample_id = "HAPMAP Control", .before = 6) %>%
+  add_row(sample_id = "HAPMAP Control", .before = 12) %>%
+  add_row(sample_id = "HAPMAP Control", .before = 13) %>%
+  add_row(sample_id = "HAPMAP Control", .before = 18) %>%
+  add_row(sample_id = "HAPMAP Control", .before = 19) %>%
+  add_row(sample_id = "Duplicate", .before = 20) %>%
+  add_row(sample_id = "Duplicate", .before = 25) %>%
+  add_row(sample_id = "Duplicate", .before = 32) %>%
+  add_row(sample_id = "Duplicate", .before = 37) %>%
+  add_row(sample_id = "Empty", .before = 95) %>%
+  add_row(sample_id = "Empty", .before = 114) %>%
+  add_row(sample_id = "Empty", .before = 133) %>%
+  add_row(sample_id = "Empty")
+
+chips <- map(c(seq(n_chips - 1), 0), function(i) {
+  all_samples %>% slice(which(row_number() %% n_chips == i))
+  }) %>% set_names(seq(n_chips))
+chips %>% map( ~ { summary(.x[, by_cols]) })
+
+formatted_chips <- chips %>% reduce(rbind) %>%
+  rename(`Gender (M/F/U)` = "Gender (", Ethnicity = "Ethnic group", `Sample ID` = "sample_id") %>%
+  add_column(Well = rep_len(wells, n_chips * 8)) %>%
+  add_column_na(col_names) %>%
+  select(col_names)
+
+write.xlsx(formatted_chips, file = "Ethiopia MEGA Manifest.xlsx", showNA = FALSE)
+```
+
+```{r test_data, include = FALSE}
+test_data <- tibble(sample_id = c(56001810110474:56001810110611), 
+                     gender = rep(c("m","f"), 69), 
+                     group = rep(c("A", "B", "C"), 46),
+                     other_data = "more info about sample") %>% 
+  mutate_at(1, as.character) %>%
+  mutate_at(c(2,3), as_factor)
+
+set.seed(42)
+sampled <- test_data %>%
+  group_by(gender, group) %>% nest() %>% ungroup() %>%     # created nested table by gender & group
+  mutate(n = map(data, nrow) %>% flatten_dbl()) %>%        # calculate number of samples in each group
+  mutate(samp = map2(data, n, sample_n)) %>%               # sample each group - remove order effects
+  select(-data) %>% arrange(-n) %>% unnest(c(samp))        # arrange by group size, get samples
+sampled
+
+sampled_w_controls <- sampled %>% # add control samples in correct placement
+  add_row(., sample_id = "HAPMAP Control", .before = 1) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 6) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 12) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 13) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 18) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 19) %>%
+  add_row(., sample_id = "Duplicate", .before = 20) %>%
+  add_row(., sample_id = "Duplicate", .before = 25) %>%
+  add_row(., sample_id = "Duplicate", .before = 32) %>%
+  add_row(., sample_id = "Duplicate", .before = 37) %>%
+  add_row(., sample_id = "Empty", .before = 95) %>%
+  add_row(., sample_id = "Empty", .before = 114) %>%
+  add_row(., sample_id = "Empty", .before = 133) %>%
+  add_row(., sample_id = "Empty")
+
+test_out <- map(c(seq(18), 0), function(i) { 
+  sampled_w_controls %>% slice(which(row_number() %% 19 == i))
+  }) %>% reduce(rbind) %>%
+  add_column(Well = rep(wells, 2)[1:152])
+
+test_out
+```
+
