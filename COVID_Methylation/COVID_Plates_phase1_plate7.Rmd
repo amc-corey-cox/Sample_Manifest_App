@@ -43,7 +43,8 @@ used_ids <- c(
   
   read_excel("Manifests/COVID_Methylation_Manifest_Plates_6_replate.xlsx", range = cell_cols(c("D:V"))) %>%
     select(`Sample ID`, `Original Plate Barcode`) %>%
-    drop_na() %>% mutate(Full_ID = str_c(`Sample ID`, `Original Plate Barcode`, sep = "-")) %>% pull(Full_ID)
+    drop_na() %>% mutate(Full_ID = str_c(`Sample ID`, `Original Plate Barcode`, sep = "-")) %>% pull(Full_ID),
+  "68-WG8855911-DNA"
 )
 
 # bsc_info <- read_excel("Manifests/20200527 BSC Plate Manifest.xlsx", sheet = "20200527 BSC", skip = 2) %>%
