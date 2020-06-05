@@ -1,20 +1,31 @@
-#SHINY Get this from UI.
+#SHINY Get this from UI, use template radio button.
 col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate", "Well", "Sample Well", "Species",
                "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
                "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
 
-get_n_plates <- function (samples, controls, n_plate_wells, n_chip_wells) {
-  n_samples <- nrow(samples)
-  n_controls <- length(controls)
+# get_n_plates <- function (samples, controls, n_plate_wells, n_chip_wells) {
+#   n_samples <- nrow(samples)
+#   n_controls <- length(controls)
+#   
+#   n_plates <- ceiling( n_samples / ( n_plate_wells - n_controls ) )
+#   total_controls <- n_plates * n_controls
+#   total_samples <- n_samples + total_controls
+#   
+#   n_chips <- ceiling( total_samples / n_chip_wells )
+#   empty_wells <- n_chips * n_chip_wells - total_samples
+#   
+#   ( total_samples + empty_wells ) / n_plate_wells
+# }
+
+get_n_plates <- function (n_samples, n_controls, n_plate_wells, n_chip_wells) {
+  total_plates <- ceiling( n_samples / ( n_plate_wells - n_controls ) )
+  total_controls <- total_plates * n_controls
+  used_wells <- n_samples + total_controls
   
-  n_plates <- ceiling( n_samples / ( n_plate_wells - n_controls ) )
-  total_controls <- n_plates * n_controls
-  total_samples <- n_samples + total_controls
+  total_chips <- ceiling( used_wells / n_chip_wells )
+  empty_wells <- total_chips * n_chip_wells - used_wells
   
-  n_chips <- ceiling( total_samples / n_chip_wells )
-  empty_wells <- n_chips * n_chip_wells - total_samples
-  
-  ( total_samples + empty_wells ) / n_plate_wells
+  ( used_wells + empty_wells ) / n_plate_wells
 }
 
 add_column_na <- function(d, col_names) {
@@ -78,7 +89,7 @@ create_manifest <- function(pheno, controls, by_cols, col_vals) {
   wells_per_plate <- 96
   samples_per_chip <- 8
   
-  n_plates <- get_n_plates(pheno, controls, 96, 8)
+  n_plates <- get_n_plates(nrow(pheno), length(controls), 96, 8)
   whole_plates <- ceiling (n_plates)
   fill_wells <- (96 - length(controls)) * whole_plates - nrow(pheno)
   
