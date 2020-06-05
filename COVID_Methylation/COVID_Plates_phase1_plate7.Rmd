@@ -15,7 +15,7 @@ library(rlang)
 ```
 
 ```{r tools, echo = false}
-source(manifest.R)
+source("../CARGO_Manifest_Generator/manifest.R")
 
 # get_n_plates <- function (n_samples, n_controls, n_plate_wells, n_chip_wells) {
 #   total_plates <- ceiling( n_samples / ( n_plate_wells - n_controls ) )
@@ -171,16 +171,17 @@ tmp <- plates %>% mutate_at(by_cols, as_factor) %>%
   group_split(Plate, Chip) %>%
   map(~ summary(.[,by_cols]))
 
-add_cols <- c("Covid +/-", "Original Plate Barcode", "Original Plate Well", "2D Sample Barcode",
-              "BSC Plate Pos.", "BSC Plate", "ng/uL BSC DNA")
+add_cols <- c("Unique_Sample_ID", "Plate ID", "Position", "Covid +/-", "2D Sample Barcode"
+              # , "BSC Plate Pos.", "BSC Plate", "ng/uL BSC DNA"
+              )
 
-plate_offset <- 5
+plate_offset <- 6
 formatted_plates <- plates %>%
   rename(`Sample ID` = "Sample Number") %>%
   add_column_na(col_names) %>% select(col_names, add_cols) %>%
   mutate(Plate = Plate + plate_offset)
 
-write.xlsx(formatted_plates, file = "Manifests/COVID_Methylation_Manifest_Plates_6_test.xlsx", showNA = FALSE)
+write.xlsx(formatted_plates, file = "Manifests/COVID_Methylation_Manifest_phase1_plate7.xlsx", showNA = FALSE)
 ```
 
 ```{r test_data, include = FALSE}
