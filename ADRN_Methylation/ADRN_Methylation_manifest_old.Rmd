@@ -1,0 +1,303 @@
+---
+title: "ADRN Methylation manifest"
+author: "Corey Cox"
+date: "1/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(tidyverse)
+library(readxl)
+library(xlsx)
+```
+
+```{r tools, echo = false}
+get_n_plates <- function (samples, controls, n_plate_wells, n_chip_wells) {
+  n_samples <- nrow(samples)
+  n_controls <- nrow(controls)
+  
+  n_plates <- ceiling( n_samples / ( n_plate_wells - n_controls ) )
+  total_controls <- n_plates * n_controls
+  total_samples <- n_samples + total_controls
+  
+  n_chips <- ceiling( total_samples / n_chip_wells )
+  empty_wells <- n_chips * n_chip_wells - total_samples
+  
+  ( total_samples + empty_wells ) / n_plate_wells
+}
+
+add_column_na <- function(d, col_names) {
+  add_cols <- col_names[!col_names %in% names(d)]
+
+  if(length(add_cols) != 0) d[add_cols] <- NA
+  d
+}
+
+col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Well", "Sample Well", "Species",
+  "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
+  "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
+
+# wells <- c("A01", "B01", "C01", "D01", "E01", "F01", "G01", "H01", "A02", "B02", "C02", "D02", "E02", "F02", "G02", "H02",
+#   "A03", "B03", "C03", "D03", "E03", "F03", "G03", "H03", "A04", "B04", "C04", "D04", "E04", "F04", "G04", "H04", 
+#   "A05", "B05", "C05", "D05", "E05", "F05", "G05", "H05", "A06", "B06", "C06", "D06", "E06", "F06", "G06", "H06",
+#   "A07", "B07", "C07", "D07", "E07", "F07", "G07", "H07", "A08", "B08", "C08", "D08", "E08", "F08", "G08", "H08",
+#   "A09", "B09", "C09", "D09", "E09", "F09", "G09", "H09", "A10", "B10", "C10", "D10", "E10", "F10", "G10", "H10",
+#   "A11", "B11", "C11", "D11", "E11", "F11", "G11", "H11", "A12", "B12", "C12", "D12", "E12", "F12", "G12", "H12")
+# 
+# wells_2 <- paste0(rep(LETTERS[1:8], each = 12), formatC(rep(1:12, times = 8), width = 2, flag = "0"))
+```
+
+
+
+## Import data for ADRN AA samples
+
+```{r import_data}
+pheno_file <- "ADRN_AA_1111_GWAS_samples_selected_for_meth_422.txt"
+pheno <- read_tsv(pheno_file) %>% drop_na(ID.1)
+
+by_cols <- c("GENDER", "DIAGROUP")
+factored_pheno <- pheno %>% mutate_at(by_cols, as_factor)
+summary(factored_pheno[, by_cols])
+
+filtered_pheno <- pheno
+# filtered_pheno <- factored_pheno %>% filter(`Ethnic group` != "Majang")
+# summary(filtered_pheno[, by_cols])
+
+rm(factored_pheno, pheno, pheno_file)
+# rm(get_n_chips, get_n_plates)
+```
+
+## Split samples into plates and balance each chip
+
+```{r split_samples}
+set.seed(42)
+
+controls <- tibble(ID.1 = c("Hypo-methylated Control", "Hyper-methylated control"))
+
+n_plates <- get_n_plates(filtered_pheno, controls, 96, 8)
+whole_plates <- ceiling (n_plates)
+n_controls <- whole_plates * nrow(controls)
+
+# Distribute the controls across the rows and columns
+all_controls <- controls %>% slice(rep(1:n(), times = whole_plates)) %>%
+  mutate(r = sample(rep(sample(LETTERS[1:8]), length.out = n_controls)),
+         c = sample(1:12, size = n_controls),
+         n = rep(1:whole_plates, each = 2),
+         Well = paste0(r, formatC(c, width = 2, flag = "0"))
+  ) %>% select (-r, -c) %>% group_split(n, keep = FALSE)
+
+# all_controls %>% map(~ all(.$Chip < 7)) - Rewrite with this...
+
+all_controls <- all_controls[c(1,2,3,5,4)] %>% 
+  imap(~ mutate(.x, Plate = .y, Chip = as.numeric(substring(Well, 2))))
+
+get_plates <- function(n_plates, n_wells = 96) {
+  rep(1:ceiling(n_plates), each = n_wells, length.out = n_wells * n_plates)
+}
+
+get_plate_wells <- function(n = 1, r = 12, c = 8) {
+  if (n == 0) { return(NULL); }
+  else if (n < 1) { return( get_plate_wells(n = 1, r = r * n, c) ) }
+  else { return( c(
+      paste0(rep(LETTERS[1:8], each = r), formatC(rep(1:r, times = c), width = 2, flag = "0")),
+      get_plate_wells(n-1, r, c)
+  ) ) }
+}
+
+get_plate_chips <- function(wells) {
+  as.numeric(substring(wells, 2))
+}
+
+# get_all_wells <- function(n) {
+#   wells <- paste0(rep(LETTERS[1:8], each = 12), formatC(rep(1:12, times = 8), width = 2, flag = "0"))
+#   full_plates <- rep(wells, times = floor(n))
+#   part <- (n - floor(n)) * 12
+#   partial_plate <- paste0(rep(LETTERS[1:8], each = part), formatC(rep(1:part, times = 8), width = 2, flag = "0"))
+#   c(full_plates, partial_plate) # %>%
+#     # split(ceiling(seq_along(.)/96))
+# }
+
+# get_empty_wells <- function (c, wells) {
+#   wells[! wells %in% c$Well]
+# }
+
+
+# part <- (n_plates - floor(n_plates)) * 12
+# 
+# all_wells <- get_plate_wells(n_plates)
+# all_chips <- c( rep(1:12, times = 8 * floor(n_plates), length.out = 96 * floor(n_plates)),
+#                 rep(1:part, times = 8))
+# 
+# empty_wells <- tibble(Plate = rep(1:whole_plates, each = 96, length.out = 96 * n_plates),
+#                       Chip = all_chips,
+#                       Well = all_wells)
+
+empty_wells <- tibble(Plate = get_plates(n_plates), Well = get_plate_wells(n_plates), Chip = get_plate_chips(Well))
+
+avail_wells <- empty_wells %>% 
+  group_split(Plate) %>%
+  map2(all_controls, ~ filter(.x, ! Well %in% .y$Well)) %>%
+  reduce(rbind) %>%
+  arrange(Well)
+
+
+# empty_wells <- all_controls %>% map2(all_wells, get_empty_wells) %>% flatten_chr()
+# arranged_wells <- tibble(Plate = rep(1:whole_plates, each = 96 - nrow(controls), length.out = length(empty_wells)), 
+#                          Well = empty_wells) %>% arrange(Well)
+
+myplates <- filtered_pheno %>% slice(sample(1:n(), n())) %>%
+  arrange(DIAGROUP, GENDER) %>%
+  cbind(avail_wells) %>%
+  group_split(Plate, Chip) %>%
+  map(~ slice(., sample(1:n(), n()))) %>%
+  reduce(rbind) %>%
+  mutate(Well = avail_wells %>% arrange(Plate, Chip, Well) %>% pull(Well)) %>%
+  mutate(ID.1 = as.character(ID.1)) %>%
+  bind_rows(reduce(all_controls, rbind)) %>%
+  arrange(Plate, Chip, Well) # %>%
+  # add_column_na(col_names) %>%
+  # select(col_names)
+
+
+# add_row(reduce(all_controls, bind_rows))
+# 
+# 
+#   mutate(Well = avail_wells$Well)
+# 
+# sampled_pheno <- filtered_pheno %>%
+#   group_by(.dots = map(by_cols, as.symbol)) %>%
+#   mutate(Plate = rep(1:n_plates, each = round(n()/total_plates), length.out = n())) %>%
+#   nest() %>% ungroup() %>%     # Create nested table by gender & group
+#   mutate(n = map(data, nrow) %>% flatten_dbl()) %>%                     # Calculate number of samples per set
+#   mutate(data = map(data, sample))  %>%                # Resample each set
+#   arrange(-n) %>% unnest()                                       # Arrange by set size, get samples
+
+# tmp <- sampled_pheno %>%
+#   group_by(Plate) %>% group_split()
+
+# add_controls <- function(d, c) {
+#   n_chips <- (nrow(d) + nrow(c)) / 8
+#   wells <- paste0(rep(LETTERS[1:8], times = n_chips), formatC(rep(1:n_chips, each = 8), width = 2, flag = "0"))
+#   open_wells <- wells[! wells %in% c$Well]
+#   d %>% add_column(Well = sample(open_wells)) %>% add_row(ID.1 = c$ID.1, Well = c$Well)
+# }
+
+
+
+# myplates <- filtered_pheno %>%
+#   group_by(.dots = map(by_cols, as.symbol)) %>%
+#   mutate(Plate = rep(1:whole_plates, each = round(n()/n_plates), length.out = n())) %>%
+#   ungroup() %>% group_split(Plate) %>%
+#   map(~ add_column_na(., "Well")) %>%
+#   map2(all_controls, ~ add_row(.x, ID.1 = .y$ID.1, Well = .y$Well))
+# 
+# tmp <- myplates %>%
+#   map(~ group_split(., .dots = map(by_cols[2], as.symbol)))
+# 
+# mychips <- myplates %>% 
+#   map(~ separate(., "Well", into = c("r", "c"), sep = 1, remove = FALSE)) %>%
+#   map(~ group_split(., c))
+#   
+
+  # map(~ add_column_na(., "Well")) %>%
+  # map2(all_controls, ~ add_row(.x, ID.1 = .y$ID.1))
+
+
+# %>%
+  # map(~ group_by(., .dots = map(by_cols, as.symbol))) %>%
+  # map(~ group_split(.)) # %>%
+
+
+
+# %>%
+#  map(~ add_row(., ID = 123456, .before = sample(1:94)[1])) %>%
+#  map(~ add_row(., ID = 123456, .before = sample(1:95)[1]))
+
+# tmp_plates <- myplates %>% map(~ add_row(., ID = 123456, .before = 1)) %>% map(~ add_row(., ID = 123456, .before = 1))
+
+# tmp <- filtered_pheno %>%
+#   group_by(.dots = map(by_cols, as.symbol)) %>% mutate(check = 1:n())
+
+
+
+# tmp <- filtered_pheno %>%
+#   group_by(.dots = map(by_cols, as.symbol)) %>% nest() %>% ungroup() %>%
+
+
+
+# plates <- sampled_pheno %>%
+#   mutate(plate = row_number() %/% 94 + 1) %>% group_by(plate)
+
+# add HAPMAP's and Duplicates
+all_samples <- sampled_pheno %>%
+  add_row(ID.1 = "HAPMAP Control", .before = 1) %>%
+  add_row(ID.1 = "HAPMAP Control", .before = 6) %>%
+  add_row(ID.1 = "HAPMAP Control", .before = 12) %>%
+  add_row(ID.1 = "HAPMAP Control", .before = 13) %>%
+  add_row(ID.1 = "HAPMAP Control", .before = 18) %>%
+  add_row(ID.1 = "HAPMAP Control", .before = 19) %>%
+  add_row(ID.1 = "Duplicate", .before = 20) %>%
+  add_row(ID.1 = "Duplicate", .before = 25) %>%
+  add_row(ID.1 = "Duplicate", .before = 32) %>%
+  add_row(ID.1 = "Duplicate", .before = 37) %>%
+  add_row(ID.1 = "Empty", .before = 95) %>%
+  add_row(ID.1 = "Empty", .before = 114) %>%
+  add_row(ID.1 = "Empty", .before = 133) %>%
+  add_row(ID.1 = "Empty")
+
+chips <- map(c(seq(n_chips - 1), 0), function(i) {
+  all_samples %>% slice(which(row_number() %% n_chips == i))
+  }) %>% set_names(seq(n_chips))
+chips %>% map( ~ { summary(.x[, by_cols]) })
+
+formatted_chips <- chips %>% reduce(rbind) %>%
+  rename(`Gender (M/F/U)` = "GENDER", Ethnicity = "DIAGROUP", `Sample ID` = "ID.1") %>%
+  add_column(Well = rep_len(wells, n_chips * 8)) %>%
+  add_column_na(col_names) %>%
+  select(col_names)
+
+write.xlsx(formatted_chips, file = "ADRN_AA_Methylation_Manifest.xlsx", showNA = FALSE)
+```
+
+```{r test_data, include = FALSE}
+test_data <- tibble(sample_id = c(56001810110474:56001810110611), 
+                     gender = rep(c("m","f"), 69), 
+                     group = rep(c("A", "B", "C"), 46),
+                     other_data = "more info about sample") %>% 
+  mutate_at(1, as.character) %>%
+  mutate_at(c(2,3), as_factor)
+
+set.seed(42)
+sampled <- test_data %>%
+  group_by(gender, group) %>% nest() %>% ungroup() %>%     # created nested table by gender & group
+  mutate(n = map(data, nrow) %>% flatten_dbl()) %>%        # calculate number of samples in each group
+  mutate(samp = map2(data, n, sample_n)) %>%               # sample each group - remove order effects
+  select(-data) %>% arrange(-n) %>% unnest(c(samp))        # arrange by group size, get samples
+sampled
+
+sampled_w_controls <- sampled %>% # add control samples in correct placement
+  add_row(., sample_id = "HAPMAP Control", .before = 1) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 6) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 12) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 13) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 18) %>%
+  add_row(., sample_id = "HAPMAP Control", .before = 19) %>%
+  add_row(., sample_id = "Duplicate", .before = 20) %>%
+  add_row(., sample_id = "Duplicate", .before = 25) %>%
+  add_row(., sample_id = "Duplicate", .before = 32) %>%
+  add_row(., sample_id = "Duplicate", .before = 37) %>%
+  add_row(., sample_id = "Empty", .before = 95) %>%
+  add_row(., sample_id = "Empty", .before = 114) %>%
+  add_row(., sample_id = "Empty", .before = 133) %>%
+  add_row(., sample_id = "Empty")
+
+test_out <- map(c(seq(18), 0), function(i) { 
+  sampled_w_controls %>% slice(which(row_number() %% 19 == i))
+  }) %>% reduce(rbind) %>%
+  add_column(Well = rep(wells, 2)[1:152])
+
+test_out
+```
+

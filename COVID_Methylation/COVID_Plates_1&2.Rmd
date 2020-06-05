@@ -1,7 +1,7 @@
 ---
 title: "ADRN Methylation manifest"
 author: "Corey Cox"
-date: "1/10/2020"
+date: "5/27/2020"
 output: html_document
 ---
 
@@ -11,6 +11,7 @@ library(magrittr)
 library(tidyverse)
 library(readxl)
 library(xlsx)
+library(rlang)
 ```
 
 ```{r tools, echo = false}
@@ -45,18 +46,38 @@ col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate
 ## Import data for ADRN AA samples
 
 ```{r import_data}
-pheno_file <- "ADRN_AA_1111_GWAS_samples_selected_for_meth_422.txt"
-pheno <- read_tsv(pheno_file) %>% drop_na(ID.1)
+setwd("/home/corey/Documents/Sample_Manifests/COVID_Methylation/")
+files <- list.files(path = ".", pattern = ".xlsx")
 
-by_cols <- c("GENDER", "DIAGROUP")
-factored_pheno <- pheno %>% mutate_at(by_cols, as_factor)
+# Get the plate barcode from each excel file
+plate_ids <- files %>% map(~ read_excel(.x, range = "B2", col_names = FALSE)) %>% reduce(bind_rows) %>% pull()
+
+phenos <- map2(files, plate_ids, ~ read_excel(.x, skip = 3) %>% # Read all the files
+  mutate(`Original Plate Barcode` = .y, `Original Plate Well` = `Position`)) %>% # Add the barcode as a column
+  map(~ mutate_all(.x, as.character)) %>% # Set all to character (allows merge)
+  reduce(bind_rows) %>% # bind together all of the data
+  # Fix coding in the Covid +/- column
+  mutate(`Covid +/-` = factor(recode(tolower(`Covid +/-`), positive = "+", negative = "-", "--" = NA_character_))) %>%
+  mutate(`A260/280` = if_else(is.na(`A260/280`), `260/280`, `A260/280`)) %>% # combine columns that have name issue
+  select(-`260/280`) %>% # Remove extraneous column after above
+  type_convert() %>% # re-guess column types
+  # Filter to just the current plates
+  filter(`Original Plate Barcode` %in% c("WG8855910-DNA", "WG8839536-DNA", "WG5976868-DNA"))
+
+# Sample 1/3 Positive 2/3 Negative from all samples in current plates (ignore NA's: uncoded Covid)
+sampled_phenos <- phenos %>% nest(data = -`Covid +/-`) %>%
+  mutate(n = c(125, 63, 0)) %>% mutate(samp = map2(data, n, sample_n)) %>%
+  select(-data) %>% unnest(cols = c(samp))
+
+by_cols <- c("Covid +/-")
+factored_pheno <- sampled_phenos %>% mutate_at(by_cols, as_factor)
 summary(factored_pheno[, by_cols])
 
-filtered_pheno <- pheno
+filtered_pheno <- factored_pheno
 # filtered_pheno <- factored_pheno %>% filter(`Ethnic group` != "Majang")
 # summary(filtered_pheno[, by_cols])
 
-rm(factored_pheno, pheno, pheno_file)
+# rm(factored_pheno, pheno, pheno_file)
 # rm(get_n_chips, get_n_plates)
 ```
 
@@ -65,7 +86,8 @@ rm(factored_pheno, pheno, pheno_file)
 ```{r split_samples}
 set.seed(42)
 
-controls <- tibble(ID.1 = c("Hypo-methylated Control", "Hyper-methylated control"))
+controls <- tibble(`Sample Number` = c("Hypo-methylated Control", "Hyper-methylated control"),
+                   `2D Sample Barcode` = c("Hypo-methylated Control", "Hyper-methylated control"))
 
 n_plates <- get_n_plates(filtered_pheno, controls, 96, 8)
 whole_plates <- ceiling (n_plates)
@@ -81,7 +103,8 @@ all_controls <- controls %>% slice(rep(1:n(), times = whole_plates)) %>%
 
 # all_controls %>% map(~ all(.$Chip < 7)) - Rewrite with this...
 
-all_controls <- all_controls[c(1,2,3,5,4)] %>% 
+# all_controls <- all_controls[c(1,2,3,5,4)] %>% 
+all_controls <- all_controls %>% 
   imap(~ mutate(.x, Plate = .y, Chip = as.numeric(substring(Well, 2))))
 
 get_plates <- function(n_plates, n_wells = 96) {
@@ -115,7 +138,7 @@ plates <- filtered_pheno %>% slice(sample(1:n(), n())) %>%
   map(~ slice(., sample(1:n(), n()))) %>%
   reduce(rbind) %>%
   mutate(Well = empty_wells %>% arrange(Plate, Chip, Well) %>% pull(Well)) %>%
-  mutate(ID.1 = as.character(ID.1)) %>%
+  mutate_at("Sample Number", as.character) %>%
   bind_rows(reduce(all_controls, rbind)) %>%
   arrange(Plate, Chip, Well)
 
@@ -123,13 +146,13 @@ tmp <- plates %>% mutate_at(by_cols, as_factor) %>%
   group_split(Plate, Chip) %>%
   map(~ summary(.[,by_cols]))
 
-add_cols <- c("Gender (M/F/U)", "AGE", "DIAGROUP")
+add_cols <- c("Covid +/-", "Original Plate Barcode", "Original Plate Well", "2D Sample Barcode")
 
 formatted_plates <- plates %>%
-  rename(`Gender (M/F/U)` = "GENDER", `Sample ID` = "ID.1") %>%
+  rename(`Sample ID` = "Sample Number") %>%
   add_column_na(col_names) %>% select(col_names, add_cols)
 
-write.xlsx(formatted_plates, file = "ADRN_AA_Methylation_Manifest_v2.xlsx", showNA = FALSE)
+write.xlsx(formatted_plates, file = "Manifests/COVID_Methylation_Manifest_Plates_1&2_v2.xlsx", showNA = FALSE)
 ```
 
 ```{r test_data, include = FALSE}

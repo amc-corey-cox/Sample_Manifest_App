@@ -1,0 +1,157 @@
+---
+title: "COVID Methylation manifest"
+author: "Corey Cox"
+date: "5/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(tidyverse)
+library(rlang)
+library(readxl)
+library(xlsx)
+```
+
+```{r tools, echo = false}
+col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate", "Well", "Sample Well", "Species",
+  "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
+  "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
+
+get_n_plates <- function (samples, controls, n_plate_wells, n_chip_wells) {
+  n_samples <- nrow(samples)
+  n_controls <- nrow(controls)
+  
+  n_plates <- ceiling( n_samples / ( n_plate_wells - n_controls ) )
+  total_controls <- n_plates * n_controls
+  total_samples <- n_samples + total_controls
+  
+  n_chips <- ceiling( total_samples / n_chip_wells )
+  empty_wells <- n_chips * n_chip_wells - total_samples
+  
+  ( total_samples + empty_wells ) / n_plate_wells
+}
+
+add_column_na <- function(d, col_names) {
+  add_cols <- col_names[!col_names %in% colnames(d)]
+
+  if(length(add_cols) != 0) d[add_cols] <- NA
+  d
+}
+
+get_plates <- function(n_plates, n_wells = 96) {
+  rep(1:ceiling(n_plates), each = n_wells, length.out = n_wells * n_plates)
+}
+
+get_plate_wells <- function(n = 1, r = 12, c = 8) {
+  if (n == 0) { return(NULL); }
+  else if (n < 1) { return( get_plate_wells(n = 1, r = r * n, c) ) }
+  else { return( c(
+      paste0(rep(LETTERS[1:8], each = r), formatC(rep(1:r, times = c), width = 2, flag = "0")),
+      get_plate_wells(n-1, r, c)
+  ) ) }
+}
+
+get_plate_chips <- function(wells) {
+  as.numeric(substring(wells, 2))
+}
+```
+
+
+
+## Import data for COVID methylation samples
+
+```{r import_data}
+pheno_file <- "05-14-20_COVID_Research_Manifest.xlsx"     #SHINY user selects file to uplod
+pheno <- read_excel(pheno_file, skip = 3)
+
+#SHINY figure out how to do data cleanup with user input... may be hard(two steps?)
+#SHINY This appears to be the main blocker in turning this into a shiny app...
+clean_pheno <- pheno %>%
+  mutate(`Avg [ng/ul]` = str_remove_all(`Avg [ng/ul]`, ">") %>% as.double(),
+         `% CV` = str_remove_all(`% CV`, "!") %>% as.double())
+
+filters <- c("")     #SHINY use paste to create this from user input
+
+filtered_pheno <- clean_pheno %>% filter(!!! parse_exprs(filters))
+# summary(filtered_pheno[, by_cols])
+
+#RSHINY I need to figure out a way to show summary info...
+by_cols <- c("Covid +/-")    #SHINY generate this from user input
+factored_pheno <- filtered_pheno %>% mutate_at(by_cols, as_factor)
+summary(factored_pheno[, by_cols])
+
+rm(clean_pheno, factored_pheno, pheno, pheno_file)
+# rm(get_n_chips, get_n_plates)
+```
+
+## Split samples into plates and balance each chip
+
+```{r split_samples}
+set.seed(42)
+
+wells_per_plate <- 96
+samples_per_chip <- 8
+control_list <- c("Hypo-methylated Control", "Hyper-methylated control")
+
+# Add extra controls or empty wells here to balance the chips/plates
+#SHINY it would be good to detect this so I don't have errors.
+
+controls <- tibble(`Sample ID` = control_list)
+# controls <- tibble(`Sample ID` = c(rep("Hypo-methylated Control", 3), rep("Hyper-methylated control", 4)))
+
+# controls <- tibble(`Sample ID` = c("Hypo-methylated Control", "Hyper-methylated control"))
+
+n_plates <- get_n_plates(filtered_pheno, controls, wells_per_plate, samples_per_chip)
+whole_plates <- ceiling (n_plates)
+n_controls <- whole_plates * nrow(controls)
+
+empty_wells <- (96 - length(control_list)) * whole_plates - nrow(filtered_pheno)
+fill_wells <- tibble(`Sample ID` = rep(control_list, ceiling(empty_wells/length(control_list)))[1:empty_wells])
+#controls <- rbind(controls, fill_wells)
+
+# Distribute the controls across the rows and columns
+all_controls <- controls %>% slice(rep(1:n(), times = whole_plates)) %>%
+  rbind(fill_wells) %>%
+  mutate(r = sample(rep(sample(LETTERS[1:8]), length.out = n_controls + empty_wells)),
+         c = sample(1:12, size = n_controls + empty_wells),
+         n = c(rep(1:whole_plates, each = nrow(controls)), rep(1:whole_plates, length.out = empty_wells)),
+         Well = paste0(r, formatC(c, width = 2, flag = "0"))
+  ) %>% select (-r, -c) %>% group_split(n, keep = FALSE)
+
+# all_controls %>% map(~ all(.$Chip < 7)) - Rewrite with this...
+
+all_controls <- all_controls %>% 
+  imap(~ mutate(.x, Plate = .y, Chip = as.numeric(substring(Well, 2))))
+
+open_wells <- tibble(Plate = get_plates(n_plates), Well = get_plate_wells(n_plates), Chip = get_plate_chips(Well)) %>%
+  group_split(Plate) %>%
+  map2(all_controls, ~ filter(.x, ! Well %in% .y$Well)) %>%
+  reduce(rbind) %>%
+  arrange(Well)
+
+defaults = c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood') #SHINY get default values from user.
+
+plates <- filtered_pheno %>% slice(sample(1:n(), n())) %>%
+  mutate(!!! defaults) %>%
+  arrange(!!! quos(!!! syms(by_cols))) %>%
+  cbind(open_wells) %>%
+  group_split(Plate, Chip) %>%
+  map(~ slice(., sample(1:n(), n()))) %>%
+  reduce(rbind) %>%
+  mutate(Well = open_wells %>% arrange(Plate, Chip, Well) %>% pull(Well)) %>%
+  mutate(`Sample Number` = as.character(`Sample Number`)) %>%
+  bind_rows(reduce(all_controls, rbind)) %>%
+  arrange(Plate, Chip, Well)
+
+# tmp <- plates %>% mutate_at(by_cols, as_factor) %>%
+#   group_split(Plate, Chip) %>%
+#   map(~ summary(.[,by_cols]))
+
+formatted_plates <- plates %>%
+  rename(`Sample ID` = "Sample Number") %>%     #FIXME should adjust pheno earlier to remove this.
+  add_column_na(col_names) %>% select(union(col_names, by_cols))
+
+write.xlsx(formatted_plates, file = "COVID_Methylation_Manifest_test.xlsx", showNA = FALSE)
+```

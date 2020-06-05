@@ -1,0 +1,89 @@
+---
+title: "Ethiopia_PCA_Kinship"
+author: "Corey Cox"
+date: "1/27/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '~/Documents/Sample_Manifests/Ethiopia')
+library(tidyverse)
+library(readxl)
+library(ggforce)
+library(ggthemes)
+library(reshape2)
+```
+
+# Load mypcair, mypcrel, fam and phenotype files
+
+```{r load_data}
+load("CAAPA2_Ethiopia_MEGA_012220_pcair_pcrel.Rdata")
+pcs <- mypcair$vectors %>% as_tibble(rownames = "IID") %>%
+  separate(IID, into = c(NA, NA, NA, "Sample ID")) %>% select(1:11)
+pheno <- read_excel("CAAPA2 Ethiopian_Saliva Samples Received_10282019_JWM.xlsx", sheet = "Sheet2")  %>%
+  rename(`Gender (M/F/U)` = "Gender (", Ethnicity = "Ethnic group", `Sample ID` = "sample_id") %>%
+  drop_na("Sample ID")
+```
+
+# Get PC's and plot based on Ethnicity/Language
+
+```{r plot_pca}
+plot_scree <- tibble(Eigenvalues = mypcair$values, Percent = mypcair$values / mypcair$sum.values * 100)
+ggplot(plot_scree, aes(x = as.integer(row.names(plot_scree)))) + 
+  geom_bar(aes(y = Percent), stat = "identity", color = plot_scree$Percent > 1.25) +
+  xlab("PC Number") + ylab("Percent Explained") + scale_color_ptol()
+ggsave("Ethiopia_screeplot.png")
+
+plot_pca <- inner_join(pheno, pcs, by = "Sample ID") %>%
+  select("Sample ID", "Ethnicity", "Language group", num_range("V", 1:10))
+ggplot(plot_pca, aes(x = V1, y = V2, shape = `Language group`, color = Ethnicity)) + 
+  geom_point(size = 2.5) + scale_color_ptol()
+ggsave("Ethiopia_PC1vPC2.png")
+
+ggplot(plot_pca, aes(x = .panel_x, y = -.panel_y, shape = `Language group`, color = Ethnicity)) + 
+  geom_point(size = 3) + geom_autodensity(aes(fill = Ethnicity)) + geom_density2d() +
+  facet_matrix(rows = vars(num_range("V", 1:5)), switch = "y", layer.diag = 2, layer.upper = 3) +
+  scale_color_ptol() + scale_fill_ptol()
+ggsave("PCA_plots_PC1-5.png", height = 14, width = 14)
+```
+
+# Plot Kinship coefficients from pcrelate
+
+
+```{r plot_kinship}
+plot_kin <- mypcrel$kinship %>% melt() %>% 
+  separate("Var1", sep = "_", into = c(NA, NA, "ID1")) %>%
+  separate("Var2", sep = "_", into = c(NA, NA, "ID2")) %>%
+  rename(Kinship = "value") %>%
+  filter(Kinship > 2^(-11/2), ID1 %in% plot_pca$`Sample ID`, ID1 != ID2) %>%
+  distinct(ID1, ID2, .keep_all = TRUE)
+
+rel_1 <- plot_kin %>% filter(Kinship > 0.2) %>% select(-Kinship) %>% as.list() %>% flatten_chr() %>% unique()
+non_1_degree_related <- plot_pca %>% filter(! `Sample ID` %in% rel_1) %>% select(`Sample ID`)
+write_csv(non_1_degree_related, "non_1st_Degree_related.csv")
+
+rel_2 <- plot_kin %>% filter(Kinship > 0.125 & Kinship < 0.2) %>% select(-Kinship) %>% flatten_chr() %>% unique()
+non_1_or_2_degree_related <- plot_pca %>% filter(! `Sample ID` %in% c(rel_1, rel_2)) %>% select(`Sample ID`)
+write_csv(non_1_or_2_degree_related, "non_1st_or_2nd_Degree_related.csv")
+
+ggplot(plot_kin, aes(x = "kinship", y = Kinship)) +
+  geom_boxplot() +
+    coord_flip() +
+    geom_violin(fill = "grey80",alpha=0.4, position = position_dodge(width = .75),size=1,color="#CCCCCC") +
+    ggtitle("Kinship for Ethiopia") +
+    geom_hline(yintercept = 0.25, linetype="dashed", color = "blue") +
+    annotate(x = 1.5, y = 0.27, geom = "text", label = "1st Degree", color = "blue",) +
+    annotate(x = 1.43, y = 0.26, geom = "text", label = length(rel_1), color = "blue") +
+    geom_hline(yintercept = 0.125, linetype="dashed", color = "darkgreen") +
+    annotate(x = 1.5, y = 0.145, geom = "text", label = "2nd Degree", color = "darkgreen") +
+    annotate(x = 1.43, y = 0.135, geom = "text", label = length(rel_2), color = "darkgreen") +
+    theme(axis.title.y=element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank())
+
+ggsave("Ethiopia_kinship_plot.png")
+```
+
+
+

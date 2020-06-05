@@ -1,7 +1,7 @@
 ---
 title: "ADRN Methylation manifest"
 author: "Corey Cox"
-date: "1/10/2020"
+date: "5/27/2020"
 output: html_document
 ---
 
@@ -11,6 +11,7 @@ library(magrittr)
 library(tidyverse)
 library(readxl)
 library(xlsx)
+library(rlang)
 ```
 
 ```{r tools, echo = false}
@@ -45,18 +46,58 @@ col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate
 ## Import data for ADRN AA samples
 
 ```{r import_data}
-pheno_file <- "ADRN_AA_1111_GWAS_samples_selected_for_meth_422.txt"
-pheno <- read_tsv(pheno_file) %>% drop_na(ID.1)
+setwd("/home/corey/Documents/Sample_Manifests/COVID_Methylation/")
+files <- list.files(path = ".", pattern = ".xlsx")
 
-by_cols <- c("GENDER", "DIAGROUP")
-factored_pheno <- pheno %>% mutate_at(by_cols, as_factor)
+# Get the plate barcode from each excel file
+plate_ids <- files %>% map(~ read_excel(.x, range = "B2", col_names = FALSE)) %>% reduce(bind_rows) %>% pull()
+
+# Get sample IDs of previously submitted samples
+used_ids <- c( read_excel("Manifests/COVID_Methylation_Manifest_Plates_1&2_updated.xlsx", range = cell_cols("A:X")) %>%
+  mutate(Full_ID = str_c(`Sample ID`, `Plate Barcode or Number`, sep = "-")) %>%
+  pull(Full_ID),
+  read_excel("Manifests/COVID_Methylation_Manifest_Plates_1&2_updated.xlsx", range = cell_cols("Y:AC")) %>%
+  drop_na() %>% mutate(Full_ID = str_c(`Replaced with`, `replace Plate ID`, sep = "-")) %>% pull(Full_ID))
+
+# Import all of the phenos, prep the data and remove used samples
+phenos <- map2(files, plate_ids, ~ read_excel(.x, skip = 3) %>% # Read all the files
+  mutate(`Original Plate Barcode` = .y, `Original Plate Well` = `Position`)) %>% # Add the barcode as a column
+  map(~ mutate_all(.x, as.character)) %>% # Set all to character (allows merge)
+  reduce(bind_rows) %>% # bind together all of the data
+  mutate(Notes = if_else(is.na(Notes), " ", Notes),
+    `Covid +/-` = if_else(str_detect(Notes, "low"), "--", `Covid +/-`), # change failed samples status to NA
+    `A260/280` = if_else(is.na(`A260/280`), `260/280`, `A260/280`), # combine columns that have name issue
+    Full_ID = str_c(`Sample Number`, `Original Plate Barcode`, sep = "-")) %>%
+  # Fix coding in the Covid +/- column
+  mutate(`Covid +/-` = factor(recode(tolower(`Covid +/-`), positive = "+", negative = "-",
+    "--" = NA_character_, "unknown" = NA_character_))) %>%
+  select(-`260/280`) %>% # Remove extraneous column after above
+  type_convert() %>% # re-guess column types
+  filter(! Full_ID %in% used_ids)
+
+has_notes <- phenos %>% filter(! is.na(Notes))
+write.xlsx(has_notes, "Supplement/Samples_w_notes.xlsx")
+
+phase_1_samples <- read_excel("Prelim Data/05-14-20_COVID_Research_Manifest.xlsx", skip = 3) %>%
+  mutate(`Original Plate Barcode` = "WG6936921-DNA", `Original Plate Well` = `Position`) %>%
+  filter(`Sample Number` %in% c("32", "82"))
+
+all_phenos <- bind_rows(phenos, phase_1_samples)
+  
+# Sample 1/3 Positive 2/3 Negative from all samples in current plates (ignore NA's: uncoded Covid)
+sampled_phenos <- all_phenos %>%  filter(! is.na(`Covid +/-`)) %>% nest(data = -`Covid +/-`) %>%
+  mutate(samp = map(data, sample)) %>%
+  select(-data) %>% unnest(cols = c(samp))
+
+by_cols <- c("Covid +/-")
+factored_pheno <- sampled_phenos %>% mutate_at(by_cols, as_factor)
 summary(factored_pheno[, by_cols])
 
-filtered_pheno <- pheno
+filtered_pheno <- factored_pheno
 # filtered_pheno <- factored_pheno %>% filter(`Ethnic group` != "Majang")
 # summary(filtered_pheno[, by_cols])
 
-rm(factored_pheno, pheno, pheno_file)
+# rm(factored_pheno, pheno, pheno_file)
 # rm(get_n_chips, get_n_plates)
 ```
 
@@ -65,23 +106,32 @@ rm(factored_pheno, pheno, pheno_file)
 ```{r split_samples}
 set.seed(42)
 
-controls <- tibble(ID.1 = c("Hypo-methylated Control", "Hyper-methylated control"))
+controls <- tibble(`Sample Number` = c("Hypo-methylated Control", "Hyper-methylated control"),
+                   `2D Sample Barcode` = c("Hypo-methylated Control", "Hyper-methylated control"))
 
 n_plates <- get_n_plates(filtered_pheno, controls, 96, 8)
 whole_plates <- ceiling (n_plates)
 n_controls <- whole_plates * nrow(controls)
 
+whole_chips <- ceiling(n_plates * 12)
+
+empty_wells <- whole_chips * 8 - n_controls - nrow(filtered_pheno)
+fill_wells <- tibble(`Sample Number` = c("Hypo-methylated Control", "Hyper-methylated control"),
+                     `2D Sample Barcode` = c("Hypo-methylated Control", "Hyper-methylated control"))
+
 # Distribute the controls across the rows and columns
 all_controls <- controls %>% slice(rep(1:n(), times = whole_plates)) %>%
-  mutate(r = sample(rep(sample(LETTERS[1:8]), length.out = n_controls)),
-         c = sample(1:12, size = n_controls),
-         n = rep(1:whole_plates, each = 2),
+  bind_rows(fill_wells) %>%
+  mutate(r = sample(rep(sample(LETTERS[1:8]), length.out = n_controls + empty_wells)),
+         c = sample(1:12, size = n_controls + empty_wells),
+         n = rep(1:whole_plates, length.out = n_controls + empty_wells),
          Well = paste0(r, formatC(c, width = 2, flag = "0"))
   ) %>% select (-r, -c) %>% group_split(n, keep = FALSE)
 
 # all_controls %>% map(~ all(.$Chip < 7)) - Rewrite with this...
 
-all_controls <- all_controls[c(1,2,3,5,4)] %>% 
+# all_controls <- all_controls[c(1,2,3,5,4)] %>% 
+all_controls <- all_controls %>% 
   imap(~ mutate(.x, Plate = .y, Chip = as.numeric(substring(Well, 2))))
 
 get_plates <- function(n_plates, n_wells = 96) {
@@ -101,7 +151,9 @@ get_plate_chips <- function(wells) {
   as.numeric(substring(wells, 2))
 }
 
-empty_wells <- tibble(Plate = get_plates(n_plates), Well = get_plate_wells(n_plates), Chip = get_plate_chips(Well)) %>%
+plate_offset <- 2
+
+open_wells <- tibble(Plate = get_plates(n_plates), Well = get_plate_wells(n_plates), Chip = get_plate_chips(Well)) %>%
   group_split(Plate) %>%
   map2(all_controls, ~ filter(.x, ! Well %in% .y$Well)) %>%
   reduce(rbind) %>%
@@ -110,12 +162,12 @@ empty_wells <- tibble(Plate = get_plates(n_plates), Well = get_plate_wells(n_pla
 plates <- filtered_pheno %>% slice(sample(1:n(), n())) %>%
   mutate(Species = "Homo sapiens", `Tissue Source` = "Whole Blood", Ethnicity = "African American") %>%
   arrange(!!! quos(!!! syms(by_cols))) %>%
-  cbind(empty_wells) %>%
+  cbind(open_wells) %>%
   group_split(Plate, Chip) %>%
   map(~ slice(., sample(1:n(), n()))) %>%
   reduce(rbind) %>%
-  mutate(Well = empty_wells %>% arrange(Plate, Chip, Well) %>% pull(Well)) %>%
-  mutate(ID.1 = as.character(ID.1)) %>%
+  mutate(Well = open_wells %>% arrange(Plate, Chip, Well) %>% pull(Well)) %>%
+  mutate_at("Sample Number", as.character) %>%
   bind_rows(reduce(all_controls, rbind)) %>%
   arrange(Plate, Chip, Well)
 
@@ -123,13 +175,14 @@ tmp <- plates %>% mutate_at(by_cols, as_factor) %>%
   group_split(Plate, Chip) %>%
   map(~ summary(.[,by_cols]))
 
-add_cols <- c("Gender (M/F/U)", "AGE", "DIAGROUP")
+add_cols <- c("Covid +/-", "Original Plate Barcode", "Original Plate Well", "2D Sample Barcode")
 
 formatted_plates <- plates %>%
-  rename(`Gender (M/F/U)` = "GENDER", `Sample ID` = "ID.1") %>%
-  add_column_na(col_names) %>% select(col_names, add_cols)
+  rename(`Sample ID` = "Sample Number") %>%
+  add_column_na(col_names) %>% select(col_names, add_cols) %>%
+  mutate(Plate = Plate + plate_offset)
 
-write.xlsx(formatted_plates, file = "ADRN_AA_Methylation_Manifest_v2.xlsx", showNA = FALSE)
+write.xlsx(formatted_plates, file = "Manifests/COVID_Methylation_Manifest_Plates_3-6_v1.xlsx", showNA = FALSE)
 ```
 
 ```{r test_data, include = FALSE}
