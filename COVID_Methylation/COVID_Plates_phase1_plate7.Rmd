@@ -15,34 +15,10 @@ library(rlang)
 ```
 
 ```{r tools, echo = false}
-source(manifest.R)
-
-# get_n_plates <- function (n_samples, n_controls, n_plate_wells, n_chip_wells) {
-#   total_plates <- ceiling( n_samples / ( n_plate_wells - n_controls ) )
-#   total_controls <- total_plates * n_controls
-#   used_wells <- n_samples + total_controls
-#   
-#   total_chips <- ceiling( used_wells / n_chip_wells )
-#   empty_wells <- total_chips * n_chip_wells - used_wells
-#   
-#   ( used_wells + empty_wells ) / n_plate_wells
-# }
-# 
-# add_column_na <- function(d, col_names) {
-#   add_cols <- col_names[!col_names %in% colnames(d)]
-# 
-#   if(length(add_cols) != 0) d[add_cols] <- NA
-#   d
-# }
-# 
-# col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate", "Well", "Sample Well", "Species",
-#   "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
-#   "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
+source("../CARGO_Manifest_Generator/manifest.R")
 ```
-
-
-
 ## Import data for ADRN AA samples
+
 
 ```{r import_data}
 setwd("/home/corey/Documents/Sample_Manifests/COVID_Methylation/")
@@ -102,8 +78,11 @@ filtered_pheno <- factored_pheno
 
 ```{r split_samples}
 set.seed(42)
-controls <- tibble(`Sample Number` = c("Hypo-methylated Control", "Hyper-methylated control"),
-                   `2D Sample Barcode` = c("Hypo-methylated Control", "Hyper-methylated control"))
+control_names = c("Hypo-methylated Control", "Hyper-methylated control")
+
+controls <- tibble(`Sample Number` = control_names,
+                   `2D Sample Barcode` = control_names,
+                   `Unique_Sample_ID` = control_names)
 
 n_plates <- get_n_plates(nrow(filtered_pheno), nrow(controls), 96, 8)
 whole_plates <- ceiling (n_plates)
@@ -112,41 +91,16 @@ n_controls <- whole_plates * nrow(controls)
 whole_chips <- ceiling(n_plates * 12)
 
 empty_wells <- whole_chips * 8 - n_controls - nrow(filtered_pheno)
-# fill_wells <- tibble(`Sample Number` = c("Hypo-methylated Control", "Hyper-methylated control"),
-#                      `2D Sample Barcode` = c("Hypo-methylated Control", "Hyper-methylated control"))
 fill_wells <- controls %>% slice(rep(1:n(), length.out = empty_wells))
 
 all_wells <- tibble(Plate = get_plates(n_plates), Well = get_plate_wells(n_plates), Chip = get_plate_chips(Well))
 
 # Distribute the controls across the rows and columns
-len_controls <- n_controls + empty_wells
+# len_controls <- n_controls + empty_wells
 all_controls <- controls %>% slice(rep(1:n(), each = whole_plates)) %>%
   bind_rows(fill_wells) %>%
-  bind_cols(sample_n(all_wells, size = len_controls)) %>%
+  bind_cols(sample_n(all_wells, size = n_controls + empty_wells)) %>%
   group_split(Plate, keep = TRUE)
-
-# get_plates <- function(n_plates, n_wells = 96) {
-#   rep(1:ceiling(n_plates), each = n_wells, length.out = n_wells * n_plates)
-# }
-# 
-# get_plate_wells <- function(n = 1, r = 12, c = 8) {
-#   if (n == 0) { return(NULL); }
-#   else if (n < 1) { return( get_plate_wells(n = 1, r = r * n, c) ) }
-#   else { return( c(
-#       paste0(rep(LETTERS[1:8], each = r), formatC(rep(1:r, times = c), width = 2, flag = "0")),
-#       get_plate_wells(n-1, r, c)
-#   ) ) }
-# }
-# 
-# get_plate_chips <- function(wells) {
-#   as.numeric(substring(wells, 2))
-# }
-
-# open_wells <- tibble(Plate = get_plates(n_plates), Well = get_plate_wells(n_plates), Chip = get_plate_chips(Well)) %>%
-#   group_split(Plate) %>%
-#   map2(all_controls, ~ filter(.x, ! Well %in% .y$Well)) %>%
-#   reduce(rbind) %>%
-#   arrange(Well)
 
 open_wells <- all_wells %>%
   group_split(Plate) %>%
@@ -171,16 +125,17 @@ tmp <- plates %>% mutate_at(by_cols, as_factor) %>%
   group_split(Plate, Chip) %>%
   map(~ summary(.[,by_cols]))
 
-add_cols <- c("Covid +/-", "Original Plate Barcode", "Original Plate Well", "2D Sample Barcode",
-              "BSC Plate Pos.", "BSC Plate", "ng/uL BSC DNA")
+add_cols <- c("Unique_Sample_ID", "Plate ID", "Position", "Covid +/-", "2D Sample Barcode"
+              # , "BSC Plate Pos.", "BSC Plate", "ng/uL BSC DNA"
+              )
 
-plate_offset <- 5
+plate_offset <- 6
 formatted_plates <- plates %>%
   rename(`Sample ID` = "Sample Number") %>%
   add_column_na(col_names) %>% select(col_names, add_cols) %>%
   mutate(Plate = Plate + plate_offset)
 
-write.xlsx(formatted_plates, file = "Manifests/COVID_Methylation_Manifest_Plates_6_test.xlsx", showNA = FALSE)
+write.xlsx(formatted_plates, file = "Manifests/COVID_Methylation_Manifest_phase1_plate7.xlsx", showNA = FALSE)
 ```
 
 ```{r test_data, include = FALSE}
