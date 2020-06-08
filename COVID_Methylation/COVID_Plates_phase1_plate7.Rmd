@@ -98,7 +98,6 @@ fill_wells <- controls %>% slice(rep(1:n(), length.out = empty_wells))
 all_wells <- tibble(Plate = get_plates(n_plates), Well = get_plate_wells(n_plates), Chip = get_plate_chips(Well))
 
 # Distribute the controls across the rows and columns
-# len_controls <- n_controls + empty_wells
 all_controls <- controls %>% slice(rep(1:n(), each = whole_plates)) %>%
   bind_rows(fill_wells) %>%
   bind_cols(sample_n(all_wells, size = n_controls + empty_wells)) %>%
@@ -136,46 +135,5 @@ formatted_plates <- plates %>%
   add_column_na(col_names) %>% select(col_names, add_cols) %>%
   mutate(Plate = Plate + plate_offset)
 
-write.xlsx(formatted_plates, file = "Manifests/COVID_Methylation_Manifest_phase1_plate7.xlsx", showNA = FALSE)
+write.xlsx(formatted_plates, file = "Manifests/COVID_Methylation_Manifest_phase1_plate7_test.xlsx", showNA = FALSE)
 ```
-
-```{r test_data, include = FALSE}
-test_data <- tibble(sample_id = c(56001810110474:56001810110611), 
-                     gender = rep(c("m","f"), 69), 
-                     group = rep(c("A", "B", "C"), 46),
-                     other_data = "more info about sample") %>% 
-  mutate_at(1, as.character) %>%
-  mutate_at(c(2,3), as_factor)
-
-set.seed(42)
-sampled <- test_data %>%
-  group_by(gender, group) %>% nest() %>% ungroup() %>%     # created nested table by gender & group
-  mutate(n = map(data, nrow) %>% flatten_dbl()) %>%        # calculate number of samples in each group
-  mutate(samp = map2(data, n, sample_n)) %>%               # sample each group - remove order effects
-  select(-data) %>% arrange(-n) %>% unnest(c(samp))        # arrange by group size, get samples
-sampled
-
-sampled_w_controls <- sampled %>% # add control samples in correct placement
-  add_row(., sample_id = "HAPMAP Control", .before = 1) %>%
-  add_row(., sample_id = "HAPMAP Control", .before = 6) %>%
-  add_row(., sample_id = "HAPMAP Control", .before = 12) %>%
-  add_row(., sample_id = "HAPMAP Control", .before = 13) %>%
-  add_row(., sample_id = "HAPMAP Control", .before = 18) %>%
-  add_row(., sample_id = "HAPMAP Control", .before = 19) %>%
-  add_row(., sample_id = "Duplicate", .before = 20) %>%
-  add_row(., sample_id = "Duplicate", .before = 25) %>%
-  add_row(., sample_id = "Duplicate", .before = 32) %>%
-  add_row(., sample_id = "Duplicate", .before = 37) %>%
-  add_row(., sample_id = "Empty", .before = 95) %>%
-  add_row(., sample_id = "Empty", .before = 114) %>%
-  add_row(., sample_id = "Empty", .before = 133) %>%
-  add_row(., sample_id = "Empty")
-
-test_out <- map(c(seq(18), 0), function(i) { 
-  sampled_w_controls %>% slice(which(row_number() %% 19 == i))
-  }) %>% reduce(rbind) %>%
-  add_column(Well = rep(wells, 2)[1:152])
-
-test_out
-```
-
