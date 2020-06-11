@@ -22,7 +22,7 @@ source("../CARGO_Manifest_Generator/manifest.R")
 
 ```{r import_data}
 setwd("/home/corey/Documents/Sample_Manifests/COVID_Methylation/")
-files <- c("COVID_phase1_samples_full_manifest_060320.xlsx")
+files <- c("COVID_phase1_samples_full_manifest_060320_old.xlsx")
 
 # Get the plate barcode from each excel file
 # plate_ids <- files %>% map(~ read_excel(.x, range = "B2", col_names = FALSE)) %>% reduce(bind_rows) %>% pull()
@@ -67,6 +67,12 @@ clean_pheno <- raw_pheno %>%
 sampled_phenos <- clean_pheno %>% nest(data = -`Covid +/-`) %>%
   mutate(n = c(19, 35)) %>% mutate(samp = map2(data, n, sample_n)) %>%
   select(-data) %>% unnest(cols = c(samp)) %>%
+  left_join(bsc_info, by = "Full_ID")
+
+recent_plate <- read_excel("Manifests/COVID_Methylation_Manifest_phase1_plate7_test.xlsx") %>%
+  mutate(Full_ID = str_c(`Sample ID`, `Plate ID`, sep = "-"))
+
+remaining_phenos <- clean_pheno %>% filter(! Full_ID %in% recent_plate$Full_ID) %>%
   left_join(bsc_info, by = "Full_ID")
 
 by_cols <- c("Covid +/-")
