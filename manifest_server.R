@@ -9,30 +9,6 @@ source("manifest_functions.R")
 
 my_colors <- c(stepped2(), stepped3(4), "#DDDDDD")
 
-manifest_ui <- function(input, output, session) { 
-  tabPanel( titlePanel("Plate Samples"), mainPanel( manifest_main(input, output, session) ) ) }
-manifest_main <- function(input, output, session) { flowLayout( manifest_sidebar, manifest_tabs ) }
-
-manifest_sidebar <- div(
-    style = "min-width: 220px; max-width: 220px;",
-    wellPanel( # sidebar
-      actionButton("getPassedSamples", "Load Passed Samples"),
-      # textOutput("debug"),
-      uiOutput("controls")
-) )
-
-manifest_tabs <- div( style="display:inline-block; min-width: 400px; padding-left:10px; padding-top:10px",
-  tabsetPanel( 
-  id = "mtabs", type = "pills",
-  tabPanel( "Passed QC", br(), DT::dataTableOutput("passedQC") ),
-  tabPanel( "Manifest", br(), DT::dataTableOutput("manifestTable")),
-  tabPanel( "Plate Layout", br(),
-    div(DT::dataTableOutput("layoutKey"), style = "font-size:80%"),
-    DT::dataTableOutput("plateLayout"),
-    uiOutput("layoutFacets")),
-  tabPanel( "Layout Facets", uiOutput("facet_UI"))
-) )
-
 manifest_server <- function(input, output, session) {
   observeEvent(input$getPassedSamples, {
     field_names <- colnames(get_data())
@@ -45,7 +21,7 @@ manifest_server <- function(input, output, session) {
         conditionalPanel("input.mtabs != 'Layout Facets'",
           radioButtons("bal_type", "Balance Type", choices = c("Disperse", "Randomize")),
           selectInput("id_col", "Sample ID Column", choices = field_names),
-          checkboxGroupInput("by_cols", "Balance by Columns", choices = set_names(field_names),
+          checkboxGroupInput("m_by_cols", "Balance by Columns", choices = set_names(field_names),
                          select = c("site", "Age_category", "Asthma")),
           checkboxGroupInput("add_cols", "Add to Manifest", choices = set_names(field_names)),
           # selectInput("col_vals", "Select Values", choices = c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood'),
@@ -65,7 +41,7 @@ manifest_server <- function(input, output, session) {
       map(~ div(DT::dataTableOutput(str_c(., "_key")), DT::dataTableOutput(.)))
   })
   
-  observe({ req(input$by_cols)
+  observe({ req(input$m_by_cols)
     input$layout_cols %>% set_names(str_c("layout_", ., "_key")) %>%
       iwalk( function(by_col, out_name) { 
         output[[out_name]] <- DT::renderDataTable( get_layout_key(get_plates(), by_col))
@@ -77,8 +53,8 @@ manifest_server <- function(input, output, session) {
   })
   
   get_data <- eventReactive(input$getPassedSamples, {
+    if (input$dataSource == "Data") { return (get_pheno()) }
     load("savePassed.RData")
-    # passedData <- forCorey
     forCorey
   })
   
@@ -92,16 +68,16 @@ manifest_server <- function(input, output, session) {
     manifest
   })
   
-  get_manifest <- reactive({
+  get_manifest_m <- reactive({
     ### TODO: Get this from UI
     col_vals <- c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood') #SHINY get default values from user.
-    format_manifest(get_plates(), input$by_cols, input$add_cols, col_vals)
+    format_manifest(get_plates(), input$m_by_cols, input$add_cols, col_vals)
   })
   
-  get_layout_types <- function(plates, by_cols) {
-    by_cols %>% set_names %>%
+  get_layout_types <- function(plates, m_by_cols) {
+    m_by_cols %>% set_names %>%
       map( ~ pull(plates, .) %>% na.omit() %>% unique() ) %>%
-      expand.grid() %>% unite(Sample_Type, all_of(by_cols)) %>%
+      expand.grid() %>% unite(Sample_Type, all_of(m_by_cols)) %>%
       arrange(Sample_Type) %>% pull(Sample_Type) %>% c("NA_NA_NA")
   }
   
@@ -119,24 +95,24 @@ manifest_server <- function(input, output, session) {
       pluck(plate_num) # Move to where we use the data?
   }
   
-  get_id_types <- function(plates, by_cols, plate_num) {
+  get_id_types <- function(plates, m_by_cols, plate_num) {
     plates %>%
       group_split(Plate) %>%
-      map(~ unite(., Sample_Type, by_cols)) %>% map(~ pull(., Sample_Type)) %>%
+      map(~ unite(., Sample_Type, m_by_cols)) %>% map(~ pull(., Sample_Type)) %>%
       map(~ matrix(c(., rep("", 96 - length(.))), nrow = 8, dimnames = list(LETTERS[1:8], 1:12))) %>%
       pluck(plate_num) # Move to where we use the data?
   }
   
-  get_layout <- function (plates, by_cols, plate_num, show_ids = TRUE) {
-    by_cols <- by_cols
-    types <- get_layout_types(plates, by_cols)
+  get_layout <- function (plates, m_by_cols, plate_num, show_ids = TRUE) {
+    m_by_cols <- m_by_cols
+    types <- get_layout_types(plates, m_by_cols)
     rm_str <- "-methyl.*"
     
     ids <- get_layout_ids(plates, plate_num, rm_str)
     if(show_ids) { display_ids <- ids } else {
       display_ids <- ids %>% str_replace(".*", " ") %>% matrix(nrow = 8, dimnames = list(LETTERS[1:8], 1:12))
     }
-    id_types <- get_id_types(plates, by_cols, plate_num)
+    id_types <- get_id_types(plates, m_by_cols, plate_num)
     layout_colors <- get_layout_colors(length(types))
     
     cbind(display_ids, id_types) %>%
@@ -146,10 +122,10 @@ manifest_server <- function(input, output, session) {
                   backgroundColor = styleEqual(levels = types, values = layout_colors))
   }
   
-  get_layout_key <- function(plates, by_cols) {
-    all_types <- get_layout_types(plates, by_cols)
+  get_layout_key <- function(plates, m_by_cols) {
+    all_types <- get_layout_types(plates, m_by_cols)
     
-    types <-  plates %>% unite(Sample_Type, by_cols) %>%
+    types <-  plates %>% unite(Sample_Type, m_by_cols) %>%
       arrange(Sample_Type) %>% pull(Sample_Type) %>% unique() %>% intersect(all_types, .)
     
     type_names <- types %>% str_replace("NA.*", "Control") %>% str_replace_all("_", " ")
@@ -165,13 +141,13 @@ manifest_server <- function(input, output, session) {
   }
   
   output$passedQC <- DT::renderDataTable({ get_data() }, options = list(pageLength = 96))
-  output$manifestTable <- DT::renderDataTable({ get_manifest() }, options = list(pageLength = 96))
+  output$manifestTable <- DT::renderDataTable({ get_manifest_m() }, options = list(pageLength = 96))
   output$downloadManifest <- downloadHandler(
     filename = function() { paste('Manifest-', Sys.Date(), '.xlsx', sep='') },
-    content = function(con) { write.xlsx(get_manifest(), file = con, showNA = FALSE) })
+    content = function(con) { write.xlsx(get_manifest_m(), file = con, showNA = FALSE) })
   
-  output$plateLayout <- DT::renderDataTable(get_layout(get_plates(), input$by_cols, input$layout_plate, input$show_ids))
-  output$layoutKey <- DT::renderDataTable(get_layout_key(get_plates(), input$by_cols))
+  output$plateLayout <- DT::renderDataTable(get_layout(get_plates(), input$m_by_cols, input$layout_plate, input$show_ids))
+  output$layoutKey <- DT::renderDataTable(get_layout_key(get_plates(), input$m_by_cols))
 
   # output$debug <- renderText({ # req(input$fileUploaded)
   #   input$mtabs
