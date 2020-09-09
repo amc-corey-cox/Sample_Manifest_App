@@ -11,6 +11,8 @@ library(reshape2)
 library(table1)
 library(pals)
 library(ggthemes)
+library(xlsx)
+library(readxl)
 
 source("data_ui.R")
 source("qc_ui.R")

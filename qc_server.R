@@ -195,6 +195,8 @@ qc_server <- function(input, output, session) {
   # })
   
   observeEvent(input$runScript, {
+    env_list <<- mylist()
+    save(env_list, file = "env_list.RData")
     source("./source_plots_shiny.R", local = list2env(mylist()))
     load("savePlots.RData")
     
