@@ -1,11 +1,11 @@
 # setwd("/Users/chris/Documents/CARGO_QC")
 #
-# library(tidyverse)
-# library(GGally)
-# library(ggplot2)
-# library(gridExtra)
-# library(reshape2)
-# 
+library(tidyverse)
+library(GGally)
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+
 # CellType = "Nasal"
 # DNAorRNA = "DNA"
 # PBMC_PASS_ONLY = "Yes"
@@ -33,7 +33,7 @@
 # includeFemales = T
 # includeAsthma = T
 # includeNonAsthma = T
-# 
+
 UTHRESH_Agilent_RINe = Inf
 UTHRESH_Agilent_DIN = Inf
 UTHRESH_TOTAL_Nanodrop_ug = Inf
@@ -48,8 +48,12 @@ UTHRESH_TOTAL_Qubit_ug = Inf
 nameDate <- "072320_updated"
 inputDir <- "./InputData/"
 inputDir <- if_else(filterMissing, "./FilteredData/", "./InputData/")
-inputDir
+# inputDir
 # nameDate <- "062520"
+
+# nameDate <- "091720"
+# inputDir <- "./InputData2/"
+# inputDir <- if_else(filterMissing, "./FilteredData/", "./InputData2/")
 
 if(CellType == "PBMC" & DNAorRNA == "DNA"){
   Fname = paste0(inputDir,"PBMC_DNA_Final_for_plots_",nameDate,".csv")
@@ -62,6 +66,9 @@ if(CellType == "PBMC" & DNAorRNA == "DNA"){
 }
 
 F1 <- read.table(Fname, sep = ",", header=T, na.strings = c("",NA))
+# F1_all <- read.table(Fname, sep = ",", header=T, na.strings = c("",NA))
+# F1 <- F1_all %>% select(subject, site, type, Age_category, Asthma, Gender, TOTAL_Nanodrop_ug,
+#                         TOTAL_Qubit_ug, Nanodrop_260_280, Agilent_RINe, Slide_status)
 if("Agilent_DIN" %in% names(F1)){
   F1$Agilent_DIN <- as.character(F1$Agilent_DIN)
   F1$Agilent_DIN <- as.numeric(F1$Agilent_DIN)
@@ -695,7 +702,7 @@ if("Slide_status" %in% names(pre_summaryTable)){
   pre_summaryTable$Slide_status <- NULL
 }
 pre_summaryTable$pass_all <- as.factor(pre_summaryTable$pass_all)
-  
+
 # summary(pre_summaryTable)
 if("Agilent_RINe" %in% names(pre_summaryTable)){
   pre_summaryTable_melt <- melt(pre_summaryTable, id=c("Nanodrop_260_280","Agilent_RINe","TOTAL_Nanodrop_ug","TOTAL_Qubit_ug","pass_all"))
@@ -777,6 +784,10 @@ forCorey$Gender[forCorey$Gender == 2] <- "Female"
 # For Asthma: 1=control, 2=case
 forCorey$Asthma[forCorey$Asthma == 1] <- "Control"
 forCorey$Asthma[forCorey$Asthma == 2] <- "Case"
+
+# F1_others <- F1_all %>% select(subject, Container_ID, Volume, Conc_Nanodrop, Conc_Qubit)
+
+forCorey <- left_join(forCorey, F1_others, by = "subject")
 
 save(summaryTable, cGram, myGridPlots, file="savePlots.RData")
 save(forCorey, file="savePassed.RData")
