@@ -692,7 +692,9 @@ if("Agilent_DIN" %in% names(pre_summaryTable)){
   pre_summaryTable$Agilent_DIN <- as.factor(pre_summaryTable$Agilent_DIN)
 }
 
-pre_summaryTable %>% write_tsv(str_c(CellType, DNAorRNA, "PassingSamplesTables/presummaryTable.tsv", sep = "_"))
+### TODO: Create an All Passing Samples Report
+# Export data for All Passing Samples Report
+pre_summaryTable %>% write_tsv(str_c("Passing_Samples_Tables/", CellType, "_", DNAorRNA, "_presummaryTable.tsv"))
 
 # Subset to only the primary passing samples...
 if("PBMC_cellcounts" %in% names(pre_summaryTable)){
