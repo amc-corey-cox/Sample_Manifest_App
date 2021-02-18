@@ -208,6 +208,7 @@ qc_ui <- tabPanel(
     checkboxInput("filterMissing", "Filter Missing", FALSE),
     
     actionButton("runScript", "Run QC & Generate Plots"),
+    downloadButton("getReport", "Download QC Report"),
     tags$h6(
       "Email christopher.arehart@cuanschutz.edu to report bugs or provide suggestions"
     )
