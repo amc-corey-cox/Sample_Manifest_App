@@ -214,6 +214,7 @@ qc_ui <- tabPanel(
     )
   ),
   
+  ### TODO: Move figures and tables to live figures within app
   titlePanel("Summary Figures"),
   mainPanel(
     plotOutput("cGram", width = "auto", height = "520px"),
