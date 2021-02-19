@@ -1,7 +1,7 @@
 library(shiny)
-library(datasets)
+# library(datasets)
 # library(ggpairs)
-require(GGally)
+# require(GGally)
 require(ggplot2)
 library(tidyverse)
 library(gridExtra)
@@ -9,18 +9,15 @@ library(plotly)
 library(DT)
 library(reshape2)
 library(table1)
-library(pals)
-library(ggthemes)
+# library(pals)
+# library(ggthemes)
 library(xlsx)
 library(readxl)
 
-source("data_ui.R")
-source("qc_ui.R")
-source("manifest_ui.R")
 
-source("data_server.R")
-source("qc_server.R")
-source("manifest_server.R")
+source("data_ui.R", local = TRUE)
+source("qc_ui.R", local = TRUE)
+source("manifest_ui.R", local = TRUE)
 
 ui <- shinyUI(fluidPage(
   titlePanel("CAAPA2 QC Metrics"),
@@ -30,6 +27,10 @@ ui <- shinyUI(fluidPage(
   # tabsetPanel( id = "top_tabs", data_ui, manifest_ui )
   # tabsetPanel( id = "top_tabs", data_ui, qc_ui )
 ))
+
+source("data_server.R", local = TRUE)
+source("qc_server.R", local = TRUE)
+source("manifest_server.R", local = TRUE)
 
 server <- shinyServer(function(input, output, session) {
   data_server(input, output, session)
