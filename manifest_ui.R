@@ -1,6 +1,3 @@
-library(tidyverse)
-library(shiny)
-
 manifest_sidebar <- div(
   style = "min-width: 220px; max-width: 220px;",
   wellPanel( # sidebar

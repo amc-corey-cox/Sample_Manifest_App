@@ -1,6 +1,3 @@
-library(tidyverse)
-library(shiny)
-
 data_server <- function(input, output, session) {
   output$fileUploaded <- reactive({ return(!is.null(input$files)) })
   outputOptions(output, 'fileUploaded', suspendWhenHidden = FALSE)
@@ -37,7 +34,7 @@ data_server <- function(input, output, session) {
     return(pheno)
   })
   
-  get_pheno <<- reactive({ req(input$files)
+  get_pheno <- reactive({ req(input$files)
     pheno <- read_pheno()
     req(input$d_id_col %in% colnames(pheno))
     pheno %>% rename("Sample ID" = input$d_id_col) %>%

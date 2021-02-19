@@ -1,11 +1,4 @@
-library(pals)
-library(ggthemes)
-library(xlsx)
-library(tidyverse)
-library(tibble)
-library(shiny)
-
-source("manifest_functions.R")
+source("manifest_functions.R", local = TRUE)
 
 my_colors <- c(stepped2(), stepped3(4), "#DDDDDD")
 

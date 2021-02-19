@@ -1,10 +1,10 @@
 # setwd("/Users/chris/Documents/CARGO_QC")
 #
-library(tidyverse)
-library(GGally)
-library(ggplot2)
-library(gridExtra)
-library(reshape2)
+# library(tidyverse)
+# library(GGally)
+# library(ggplot2)
+# library(gridExtra)
+# library(reshape2)
 
 # CellType = "Nasal"
 # DNAorRNA = "DNA"
@@ -45,15 +45,15 @@ UTHRESH_TOTAL_Qubit_ug = Inf
 # F3 <- read.table("./InputData/Nasal_rna_Rep1_data_for_plots.txt", sep = "\t", header=T)
 # F4 <- read.table("./InputData/Nasal_DNA_Rep1_data_for_plots.txt", sep = "\t", header=T)
 
-nameDate <- "072320_updated"
-inputDir <- "./InputData/"
-inputDir <- if_else(filterMissing, "./FilteredData/", "./InputData/")
+# nameDate <- "072320_updated"
+# inputDir <- "./InputData/"
+# inputDir <- if_else(filterMissing, "./FilteredData/", "./InputData/")
 # inputDir
 # nameDate <- "062520"
 
-# nameDate <- "091720"
-# inputDir <- "./InputData2/"
-# inputDir <- if_else(filterMissing, "./FilteredData/", "./InputData2/")
+nameDate <- "091720"
+inputDir <- "./InputData2/"
+inputDir <- if_else(filterMissing, "./FilteredData/", "./InputData2/")
 
 if(CellType == "PBMC" & DNAorRNA == "DNA"){
   Fname = paste0(inputDir,"PBMC_DNA_Final_for_plots_",nameDate,".csv")
@@ -65,6 +65,8 @@ if(CellType == "PBMC" & DNAorRNA == "DNA"){
   Fname = paste0(inputDir,"Nasal_RNA_Final_for_plots_",nameDate,".csv")
 }
 
+
+
 F1 <- read.table(Fname, sep = ",", header=T, na.strings = c("",NA))
 # F1_all <- read.table(Fname, sep = ",", header=T, na.strings = c("",NA))
 # F1 <- F1_all %>% select(subject, site, type, Age_category, Asthma, Gender, TOTAL_Nanodrop_ug,
@@ -72,6 +74,7 @@ F1 <- read.table(Fname, sep = ",", header=T, na.strings = c("",NA))
 if("Agilent_DIN" %in% names(F1)){
   F1$Agilent_DIN <- as.character(F1$Agilent_DIN)
   F1$Agilent_DIN <- as.numeric(F1$Agilent_DIN)
+  F1$Agilent_DIN[is.na(F1$Agilent_DIN)] <- 0
 }
 if("Agilent_RINe" %in% names(F1)){
   F1$Agilent_RINe <- as.character(F1$Agilent_RINe)
@@ -79,6 +82,7 @@ if("Agilent_RINe" %in% names(F1)){
 }
 F1$Asthma <- as.character(F1$Asthma)
 F1$Gender <- as.character(F1$Gender)
+
 
 
 # Subset data given choice of subset
@@ -107,8 +111,11 @@ dataFocusSelect <-  dataFocus %>% select(starts_with("TOTAL_Nanodrop_ug"),
                                          starts_with("Slide_status")
                                          )
 
+
+
 glimpse(dataFocusSelect)
 summary(dataFocusSelect)
+
 
 c1 <- "slategrey"
 # c2 <- "wheat2"
@@ -417,7 +424,6 @@ gridMaker <- function(inputData, VarVec){
 
 }
 
-
 # SET THE THRESHOLDS ----
 # pdf("testing.pdf", width = 20, height = 15)
 if("Agilent_DIN" %in% names(dataFocusSelect)){
@@ -438,7 +444,6 @@ if("Agilent_DIN" %in% names(dataFocusSelect)){
     }else if(PBMC_PASS_ONLY == "Yes"){
       dataFocusSelectSubContinue <- subset(dataFocusSelect, PBMC_cellcounts %in% c("PASS"))
     }
-    
     dataFocusSelectSubContinue$FAIL_ANY <- 0
     dataFocusSelectSubContinue$FAIL_ANY[dataFocusSelectSubContinue[["Nanodrop_260_280"]] < LTHRESH_Nanodrop_260_280 | dataFocusSelectSubContinue[["Nanodrop_260_280"]] > UTHRESH_Nanodrop_260_280 ] <- 
       dataFocusSelectSubContinue$FAIL_ANY[dataFocusSelectSubContinue[["Nanodrop_260_280"]] < LTHRESH_Nanodrop_260_280 | dataFocusSelectSubContinue[["Nanodrop_260_280"]] > UTHRESH_Nanodrop_260_280 ] + 1
@@ -450,7 +455,6 @@ if("Agilent_DIN" %in% names(dataFocusSelect)){
       dataFocusSelectSubContinue$FAIL_ANY[dataFocusSelectSubContinue[["TOTAL_Qubit_ug"]] < LTHRESH_TOTAL_Qubit_ug | dataFocusSelectSubContinue[["TOTAL_Qubit_ug"]] > UTHRESH_TOTAL_Qubit_ug ] + 1
     
     # dataFocusSelectSubContinue$FAIL_ANY <- as.factor(dataFocusSelectSubContinue$FAIL_ANY)
-    
     # run grid plotter
     myGridPlots <- gridMaker(inputData = dataFocusSelectSubContinue, VarVec = c("Nanodrop_260_280", "Agilent_DIN", "TOTAL_Nanodrop_ug", "TOTAL_Qubit_ug") )
     # plotDF <- data.frame(matrix(unlist(1:4^2), nrow=4, byrow=T),stringsAsFactors=FALSE)
@@ -473,13 +477,13 @@ if("Agilent_DIN" %in% names(dataFocusSelect)){
                                        nrow(subset(dataFocusSelectSubContinue, dataFocusSelectSubContinue$PBMC_cellcounts == "FAIL" & dataFocusSelectSubContinue$FAIL_ANY == "FAIL ANY"))
     )
     # summaryTable
-    
   }else if("Slide_status" %in% names(dataFocusSelect)){
     if(Slide_status_PASS_ONLY == "No"){
       dataFocusSelectSubContinue <- subset(dataFocusSelect, Slide_status %in% c("PASS","FAIL"))
     }else if(Slide_status_PASS_ONLY == "Yes"){
       dataFocusSelectSubContinue <- subset(dataFocusSelect, Slide_status %in% c("PASS"))
     }
+    print("Did we make it here? 1")
     
     dataFocusSelectSubContinue$FAIL_ANY <- 0
     dataFocusSelectSubContinue$FAIL_ANY[dataFocusSelectSubContinue[["Nanodrop_260_280"]] < LTHRESH_Nanodrop_260_280 | dataFocusSelectSubContinue[["Nanodrop_260_280"]] > UTHRESH_Nanodrop_260_280 ] <- 
@@ -492,7 +496,7 @@ if("Agilent_DIN" %in% names(dataFocusSelect)){
       dataFocusSelectSubContinue$FAIL_ANY[dataFocusSelectSubContinue[["TOTAL_Qubit_ug"]] < LTHRESH_TOTAL_Qubit_ug | dataFocusSelectSubContinue[["TOTAL_Qubit_ug"]] > UTHRESH_TOTAL_Qubit_ug ] + 1
     
     # dataFocusSelectSubContinue$FAIL_ANY <- as.factor(dataFocusSelectSubContinue$FAIL_ANY)
-    
+    print("Did we make it here? 2")
     # run grid plotter
     myGridPlots <- gridMaker(inputData = dataFocusSelectSubContinue, VarVec = c("Nanodrop_260_280", "Agilent_DIN", "TOTAL_Nanodrop_ug", "TOTAL_Qubit_ug") )
     # plotDF <- data.frame(matrix(unlist(1:4^2), nrow=4, byrow=T),stringsAsFactors=FALSE)
@@ -688,6 +692,10 @@ if("Agilent_DIN" %in% names(pre_summaryTable)){
   pre_summaryTable$Agilent_DIN <- as.factor(pre_summaryTable$Agilent_DIN)
 }
 
+### TODO: Create an All Passing Samples Report
+# Export data for All Passing Samples Report
+pre_summaryTable %>% write_tsv(str_c("Passing_Samples_Tables/", CellType, "_", DNAorRNA, "_presummaryTable.tsv"))
+
 # Subset to only the primary passing samples...
 if("PBMC_cellcounts" %in% names(pre_summaryTable)){
   if(PBMC_PASS_ONLY == "Yes"){
@@ -710,6 +718,10 @@ if("Agilent_RINe" %in% names(pre_summaryTable)){
 if("Agilent_DIN" %in% names(pre_summaryTable)){
   pre_summaryTable_melt <- melt(pre_summaryTable, id=c("Nanodrop_260_280","Agilent_DIN","TOTAL_Nanodrop_ug","TOTAL_Qubit_ug","pass_all"))
 }
+
+
+
+
 pre_summaryTable_melt_total <- pre_summaryTable
 pre_summaryTable_melt_total$site <- NULL
 pre_summaryTable_melt_total$Age_category <- NULL
@@ -786,8 +798,8 @@ forCorey$Asthma[forCorey$Asthma == 1] <- "Control"
 forCorey$Asthma[forCorey$Asthma == 2] <- "Case"
 
 # F1_others <- F1_all %>% select(subject, Container_ID, Volume, Conc_Nanodrop, Conc_Qubit)
-
-forCorey <- left_join(forCorey, F1_others, by = "subject")
+# 
+# forCorey <- left_join(forCorey, F1_others, by = "subject")
 
 save(summaryTable, cGram, myGridPlots, file="savePlots.RData")
 save(forCorey, file="savePassed.RData")
