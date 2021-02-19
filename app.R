@@ -1,16 +1,15 @@
 library(shiny)
-# library(datasets)
-# library(ggpairs)
-# require(GGally)
-require(ggplot2)
 library(tidyverse)
+
+library(ggplot2)
 library(gridExtra)
 library(plotly)
-library(DT)
+library(pals)
+
 library(reshape2)
+library(DT)
 library(table1)
-# library(pals)
-# library(ggthemes)
+
 library(xlsx)
 library(readxl)
 

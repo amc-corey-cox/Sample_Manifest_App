@@ -1,7 +1,3 @@
-library(tidyverse)
-library(shiny)
-
-
 upload_ctrl <- function() {
   # fileInput("files", "Upload Phenotype File", multiple = TRUE,
   fileInput("files", "Upload Phenotype File", multiple = FALSE,
