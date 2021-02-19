@@ -1,10 +1,10 @@
 # setwd("/Users/chris/Documents/CARGO_QC")
 #
-library(tidyverse)
-library(GGally)
-library(ggplot2)
-library(gridExtra)
-library(reshape2)
+# library(tidyverse)
+# library(GGally)
+# library(ggplot2)
+# library(gridExtra)
+# library(reshape2)
 
 # CellType = "Nasal"
 # DNAorRNA = "DNA"

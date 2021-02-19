@@ -1,6 +1,3 @@
-library(tidyverse)
-library(shiny)
-
 data_server <- function(input, output, session) {
   output$fileUploaded <- reactive({ return(!is.null(input$files)) })
   outputOptions(output, 'fileUploaded', suspendWhenHidden = FALSE)

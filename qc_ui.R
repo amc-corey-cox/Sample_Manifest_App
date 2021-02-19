@@ -1,6 +1,3 @@
-library(tidyverse)
-library(shiny)
-
 qc_ui <- tabPanel(
   titlePanel("Data Setup & QC"),
   sidebarPanel(
