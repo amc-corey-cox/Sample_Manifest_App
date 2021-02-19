@@ -1,0 +1,245 @@
+---
+title: "QC & Sample Report"
+author: "Corey Cox"
+date: "2/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(GGally)
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+```
+
+## CAAPA2 QC Report
+
+
+```{r define_vars}
+CellType = "Nasal"
+DNAorRNA = "DNA"
+PBMC_PASS_ONLY = "Yes"
+Slide_status_PASS_ONLY = "Yes"
+Include_Boxplots = "No"
+LTHRESH_Nanodrop_260_280 = 1.7
+UTHRESH_Nanodrop_260_280 = 2.2
+LTHRESH_Agilent_DIN = 6
+UTHRESH_Agilent_DIN = Inf
+LTHRESH_Agilent_RINe = 6
+UTHRESH_Agilent_RINe = Inf
+LTHRESH_TOTAL_Nanodrop_ug = 0.75
+UTHRESH_TOTAL_Nanodrop_ug = Inf
+LTHRESH_TOTAL_Qubit_ug = 0.75
+UTHRESH_TOTAL_Qubit_ug = Inf
+includeBaltimore = T
+includeBrazil = T
+includeChicago = T
+includeDenver = T
+includeNigeria = T
+includeWashington_DC = T
+includeAdult = T
+includeChild = T
+includeMales = T
+includeFemales = T
+includeAsthma = T
+includeNonAsthma = T
+
+filterMissing = FALSE
+```
+
+## Get Data
+
+```{r load_data}
+nameDate <- "091720"
+inputDir <- "./InputData2/"
+inputDir <- if_else(filterMissing, "./FilteredData/", "./InputData2/")
+
+if(CellType == "PBMC" & DNAorRNA == "DNA"){
+  Fname = paste0(inputDir,"PBMC_DNA_Final_for_plots_",nameDate,".csv")
+}else if(CellType == "PBMC" & DNAorRNA == "RNA"){
+  Fname = paste0(inputDir,"PBMC_RNA_Final_for_plots_",nameDate,".csv")
+}else if(CellType == "Nasal" & DNAorRNA == "DNA"){
+  Fname = paste0(inputDir,"Nasal_DNA_Final_for_plots_",nameDate,".csv")
+}else if(CellType == "Nasal" & DNAorRNA == "RNA"){
+  Fname = paste0(inputDir,"Nasal_RNA_Final_for_plots_",nameDate,".csv")
+}
+
+F1 <- read.table(Fname, sep = ",", header=T, na.strings = c("",NA))
+# F1_all <- read.table(Fname, sep = ",", header=T, na.strings = c("",NA))
+# F1 <- F1_all %>% select(subject, site, type, Age_category, Asthma, Gender, TOTAL_Nanodrop_ug,
+#                         TOTAL_Qubit_ug, Nanodrop_260_280, Agilent_RINe, Slide_status)
+if("Agilent_DIN" %in% names(F1)){
+  F1$Agilent_DIN <- as.character(F1$Agilent_DIN)
+  F1$Agilent_DIN <- as.numeric(F1$Agilent_DIN)
+  F1$Agilent_DIN[is.na(F1$Agilent_DIN)] <- 0
+}
+if("Agilent_RINe" %in% names(F1)){
+  F1$Agilent_RINe <- as.character(F1$Agilent_RINe)
+  F1$Agilent_RINe <- as.numeric(F1$Agilent_RINe)
+}
+F1$Asthma <- as.character(F1$Asthma)
+F1$Gender <- as.character(F1$Gender)
+
+
+
+# Subset data given choice of subset
+sitesToInclude <- c("Baltimore", "Brazil", "Chicago", "Denver", "Nigeria", "Washington DC")[c(includeBaltimore,includeBrazil,includeChicago,includeDenver,includeNigeria,includeWashington_DC)]
+F1 <- subset(F1, F1$site %in% sitesToInclude)
+
+AgeToInclude <- c("Adult", "Child")[c(includeAdult, includeChild)]
+F1 <- subset(F1, F1$Age_category %in% AgeToInclude)
+
+# For Asthma: 1=control, 2=case
+AsthmaToInclude <- c("1", "2")[c(includeNonAsthma, includeAsthma)]
+F1 <- subset(F1, F1$Asthma %in% AsthmaToInclude)
+
+# For Age: 1=male, 2=female
+GenderToInclude <- c("1", "2")[c(includeMales, includeFemales)]
+F1 <- subset(F1, F1$Gender %in% GenderToInclude)
+```
+
+
+
+```{r summary}
+# Select meaningful columns
+dataFocus <- as_tibble(F1)
+dataFocusSelect <-  dataFocus %>% select(starts_with("TOTAL_Nanodrop_ug"), 
+                                         starts_with("TOTAL_Qubit_ug"), 
+                                         starts_with("Nanodrop_260_280"), 
+                                         starts_with("Agilent_DIN"), 
+                                         starts_with("Agilent_RINe"),
+                                         starts_with("PBMC_cellcounts"),
+                                         starts_with("Slide_status")
+                                         )
+
+
+
+glimpse(dataFocusSelect)
+summary(dataFocusSelect)
+```
+
+## cGram Plot
+
+```{r cGream_plot}
+c1 <- "slategrey"
+# c2 <- "wheat2"
+c2 <- "slategray1"
+my_density <- function(data,mapping,...){ggplot(data=data,mapping=mapping)+geom_density(...,lwd=1, colour = c1, fill = c2)}
+
+cGramFunc <- function(inputData, colorColumn){
+  if(is.null(colorColumn)){
+    cGramPlot <- ggpairs(inputData, title="Correlation of QC Metrics", 
+                         mapping=ggplot2::aes_string(alpha = 0.65),
+                         lower = list(continuous = wrap("points", alpha = 0.65, colour = c1, size=0.8), 
+                                      combo = wrap("dot", alpha = 0.65, colour = c1, size=0.8) ),
+                         diag = list(continuous = my_density)
+    )
+  }else{
+    cGramPlot <- ggpairs(inputData, title="Correlation of QC Metrics", 
+                         mapping=ggplot2::aes_string(colour = colorColumn, alpha = 0.65),
+                         lower = list(continuous = wrap("points", alpha = 0.65,    size=0.8), 
+                                      combo = wrap("dot", alpha = 0.65,            size=0.8) )
+    )
+  }
+  
+  
+  
+  index_TOTAL_Nanodrop_ug <- which(names(inputData) == "TOTAL_Nanodrop_ug")
+  index_TOTAL_Qubit_ug <- which(names(inputData) == "TOTAL_Qubit_ug")
+  index_Nanodrop_260_280 <- which(names(inputData) == "Nanodrop_260_280")
+  index_Agilent_DIN <- which(names(inputData) == "Agilent_DIN")
+  index_Agilent_RINe <- which(names(inputData) == "Agilent_RINe")
+  
+  toKeep <- which(c("TOTAL_Nanodrop_ug", "TOTAL_Qubit_ug", "Nanodrop_260_280", "Agilent_DIN",
+                    "Agilent_RINe")
+                  %in% cGramPlot$xAxisLabels)
+  
+  indexVec <- c(index_TOTAL_Nanodrop_ug, index_TOTAL_Qubit_ug, index_Nanodrop_260_280, index_Agilent_DIN,
+                index_Agilent_RINe)
+  
+  LTHRESHVec <- c(LTHRESH_TOTAL_Nanodrop_ug, LTHRESH_TOTAL_Qubit_ug, LTHRESH_Nanodrop_260_280, LTHRESH_Agilent_DIN,
+                  LTHRESH_Agilent_RINe)[toKeep]
+  
+  UTHRESH_Vec <- c(UTHRESH_TOTAL_Nanodrop_ug, UTHRESH_TOTAL_Qubit_ug, UTHRESH_Nanodrop_260_280, UTHRESH_Agilent_DIN,
+                  UTHRESH_Agilent_RINe)[toKeep]
+  
+  thresholdColors1 <- "lightgoldenrod3"
+  thresholdSize <- 0.55
+  
+  for(i in 1:length(indexVec)){
+    for(j in 1:length(indexVec)){
+      if(i > j){
+        cGramPlot[indexVec[i],indexVec[j]] = cGramPlot[indexVec[i],indexVec[j]] + 
+          geom_vline(xintercept = LTHRESHVec[j],color=thresholdColors1,size=thresholdSize)+
+          geom_vline(xintercept = UTHRESH_Vec[j],color=thresholdColors1,size=thresholdSize)+
+          geom_hline(yintercept = LTHRESHVec[i],color=thresholdColors1,size=thresholdSize)+
+          geom_hline(yintercept = UTHRESH_Vec[i],color=thresholdColors1,size=thresholdSize)
+      }else if(i == j){
+        cGramPlot[indexVec[i],indexVec[j]] = cGramPlot[indexVec[i],indexVec[j]] + 
+          geom_vline(xintercept = LTHRESHVec[i],color=thresholdColors1,size=thresholdSize)+
+          geom_vline(xintercept = UTHRESH_Vec[i],color=thresholdColors1,size=thresholdSize)
+      }
+      # if(is.null(colorColumn)){
+      #   cGramPlot[indexVec[i],indexVec[j]] = cGramPlot[indexVec[i],indexVec[j]] + 
+      #     scale_fill_manual(values=c("green")) +
+      #     scale_color_manual(values=c("coral"))  
+      # }
+    }
+  }
+  
+  return(cGramPlot)
+}
+
+if("PBMC_cellcounts" %in% names(dataFocusSelect)){
+  if(PBMC_PASS_ONLY == "No"){
+    dataFocusSelectSub <- subset(dataFocusSelect, PBMC_cellcounts %in% c("PASS","FAIL"))
+    if(Include_Boxplots == "No"){
+      dataFocusSelectSub$PBMC_cellcounts <- NULL
+      cGram <- cGramFunc(inputData = dataFocusSelectSub, colorColumn = NULL)
+    }else{
+      cGram <- cGramFunc(inputData = dataFocusSelectSub, colorColumn = "PBMC_cellcounts")
+    }
+  }else if(PBMC_PASS_ONLY == "Yes"){
+    dataFocusSelectSub <- subset(dataFocusSelect, PBMC_cellcounts %in% c("PASS"))
+    if(Include_Boxplots == "No"){
+      dataFocusSelectSub$PBMC_cellcounts <- NULL
+      cGram <- cGramFunc(inputData = dataFocusSelectSub, colorColumn = NULL)
+    }else{
+      cGram <- cGramFunc(inputData = dataFocusSelectSub, colorColumn = "PBMC_cellcounts")
+    }
+  }
+}else if("Slide_status" %in% names(dataFocusSelect)){
+  if(Slide_status_PASS_ONLY == "No"){
+    dataFocusSelectSub <- subset(dataFocusSelect, Slide_status %in% c("PASS","FAIL"))
+    if(Include_Boxplots == "No"){
+      dataFocusSelectSub$Slide_status <- NULL
+      cGram <- cGramFunc(inputData = dataFocusSelectSub, colorColumn = NULL)
+    }else{
+      cGram <- cGramFunc(inputData = dataFocusSelectSub, colorColumn = "Slide_status")
+    }
+  }else if(Slide_status_PASS_ONLY == "Yes"){
+    dataFocusSelectSub <- subset(dataFocusSelect, Slide_status %in% c("PASS"))
+    if(Include_Boxplots == "No"){
+      dataFocusSelectSub$Slide_status <- NULL
+      cGram <- cGramFunc(inputData = dataFocusSelectSub, colorColumn = NULL)
+    }else{
+      cGram <- cGramFunc(inputData = dataFocusSelectSub, colorColumn = "Slide_status")
+    }
+  }
+}
+
+cGram <- cGram + theme(legend.position = "none", 
+                         panel.grid.major = element_blank(), 
+                         axis.ticks = element_blank(), 
+                         panel.border = element_rect(linetype = "solid", colour = "white", fill = NA))
+
+cGram
+```
+
+```{r}
+
+```
+
