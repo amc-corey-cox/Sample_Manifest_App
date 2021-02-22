@@ -483,7 +483,6 @@ if("Agilent_DIN" %in% names(dataFocusSelect)){
     }else if(Slide_status_PASS_ONLY == "Yes"){
       dataFocusSelectSubContinue <- subset(dataFocusSelect, Slide_status %in% c("PASS"))
     }
-    print("Did we make it here? 1")
     
     dataFocusSelectSubContinue$FAIL_ANY <- 0
     dataFocusSelectSubContinue$FAIL_ANY[dataFocusSelectSubContinue[["Nanodrop_260_280"]] < LTHRESH_Nanodrop_260_280 | dataFocusSelectSubContinue[["Nanodrop_260_280"]] > UTHRESH_Nanodrop_260_280 ] <- 
@@ -496,7 +495,6 @@ if("Agilent_DIN" %in% names(dataFocusSelect)){
       dataFocusSelectSubContinue$FAIL_ANY[dataFocusSelectSubContinue[["TOTAL_Qubit_ug"]] < LTHRESH_TOTAL_Qubit_ug | dataFocusSelectSubContinue[["TOTAL_Qubit_ug"]] > UTHRESH_TOTAL_Qubit_ug ] + 1
     
     # dataFocusSelectSubContinue$FAIL_ANY <- as.factor(dataFocusSelectSubContinue$FAIL_ANY)
-    print("Did we make it here? 2")
     # run grid plotter
     myGridPlots <- gridMaker(inputData = dataFocusSelectSubContinue, VarVec = c("Nanodrop_260_280", "Agilent_DIN", "TOTAL_Nanodrop_ug", "TOTAL_Qubit_ug") )
     # plotDF <- data.frame(matrix(unlist(1:4^2), nrow=4, byrow=T),stringsAsFactors=FALSE)
