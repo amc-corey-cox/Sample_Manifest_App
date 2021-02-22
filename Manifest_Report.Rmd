@@ -1,0 +1,43 @@
+---
+title: "QC & Sample Report"
+author: "Corey Cox"
+date: "2/16/2021"
+params:
+  seed: NA
+  plate: NA
+#   types: NA
+#   layout_colors: NA
+#   layout_key: NA
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(DT)
+library(shiny)
+```
+
+```{r}
+```
+
+## Manifest Sample Report
+
+### Random Seed: `r params$seed`
+
+
+```{r echo=FALSE, fig.keep = 'all', message=FALSE, results = 'hide', warning=FALSE}
+```
+
+```{r}
+params$plate
+```
+
+```{r echo=FALSE, render='as-is'}
+# params$summaryTable
+```
+
+```{r echo=FALSE, results='hide', warning=FALSE}
+# params$myGridPlots
+```
+
