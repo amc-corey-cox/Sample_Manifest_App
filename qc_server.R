@@ -312,9 +312,9 @@ qc_server <- function(input, output, session) {
     # For PDF output, change this to "report.pdf"
     filename = function() { paste('QC_Report-', Sys.Date(), '.html', sep='') },
     content = function(con) {
-      load("env_list.RData")
+      # load("env_list.RData")
       load("savePlots.RData")
-      params <- list(env_list = env_list, cGram = cGram, summaryTable = summaryTable, myGridPlots = myGridPlots)
+      params <- list(env_list = mylist(), cGram = cGram, summaryTable = summaryTable, myGridPlots = myGridPlots)
       render("QC_Sample_Report.Rmd", output_file = con,
                         params = params,
                         # Can I just use globalenv() and not pass params? 

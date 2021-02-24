@@ -35,17 +35,17 @@ library(reshape2)
 <div style="width: 50%; float: left;">
 ```{r , echo = FALSE}
 library(DT)
-env_vars <- bind_rows(env_list) %>%
+env_vars <- bind_rows(params$env_list) %>%
   mutate(across(everything(), as.character)) %>%
   pivot_longer(cols = everything())
 
-datatable(top_n(env_vars, 12), options = list(dom = 't', pageLength = 12))
+datatable(slice_head(env_vars, prop = 0.5), options = list(dom = 't', pageLength = 12))
 ```
 </div>
 
 <div style="width: 50%; float: left;">
 ```{r , echo = FALSE}
-datatable(top_n(env_vars, -12), options = list(dom = 't', pageLength = 12))
+datatable(slice_tail(env_vars, prop = 0.5), options = list(dom = 't', pageLength = 12))
 ```
 </div>
 
