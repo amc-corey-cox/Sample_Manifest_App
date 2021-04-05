@@ -20,7 +20,8 @@ data_server <- function(input, output, session) {
   #   do.call(tabsetPanel, myTabs)
   # })
   
-  read_pheno <- reactive({
+  # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
+  read_pheno <<- reactive({
     # return()
     if (is.na(excel_format(input$files$datapath))) {
       pheno <- read_delim(input$files$datapath, col_names = input$col_names,
@@ -34,7 +35,8 @@ data_server <- function(input, output, session) {
     return(pheno)
   })
   
-  get_pheno <- reactive({ req(input$files)
+  # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
+  get_pheno <<- reactive({ req(input$files)
     pheno <- read_pheno()
     req(input$d_id_col %in% colnames(pheno))
     pheno %>% rename("Sample ID" = input$d_id_col) %>%
