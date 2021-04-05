@@ -58,7 +58,7 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
   
   samples_w_wells %>%
     mutate(!!! col_vals) %>%
-    mutate("Gender (M/F/U)" = Gender) %>%
+    # mutate("Gender (M/F/U)" = Gender) %>%
     add_column_na(col_names) %>%
     select(union(col_names, c(all_of(by_cols), add_cols)))
 }
