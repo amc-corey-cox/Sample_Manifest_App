@@ -2,6 +2,7 @@ library(shiny)
 library(tidyverse)
 
 library(ggplot2)
+library(GGally)
 library(gridExtra)
 library(plotly)
 library(pals)
