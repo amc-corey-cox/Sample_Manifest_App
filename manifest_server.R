@@ -16,12 +16,15 @@ manifest_server <- function(input, output, session) {
           selectInput("id_col", "Sample ID Column", choices = field_names),
           checkboxGroupInput("m_by_cols", "Balance by Columns", choices = set_names(field_names),
                          select = c("site", "Age_category", "Asthma")),
+          # checkboxGroupInput("m_by_cols", "Balance by Columns", choices = set_names(field_names)),
           checkboxGroupInput("add_cols", "Add to Manifest", choices = set_names(field_names)),
           # selectInput("col_vals", "Select Values", choices = c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood'),
           #             selected = c("Species", "Tissue Source")),
           numericInput("seed", "Set Random Seed", value = 44),
           downloadButton("downloadManifest", "Download Manifest")
         ),
+        # conditionalPanel("input.mtabs == 'Layout Facets'",
+        #     checkboxGroupInput("layout_cols", "Balance by Columns", choices = set_names(field_names)))
         conditionalPanel("input.mtabs == 'Layout Facets'",
           checkboxGroupInput("layout_cols", "Balance by Columns", choices = set_names(field_names),
             select = c("site", "Age_category", "Asthma", "Gender"))
@@ -34,7 +37,7 @@ manifest_server <- function(input, output, session) {
       map(~ div(DT::dataTableOutput(str_c(., "_key")), DT::dataTableOutput(.)))
   })
   
-  observe({ req(input$m_by_cols)
+  observe({ req(input$layout_cols)
     input$layout_cols %>% set_names(str_c("layout_", ., "_key")) %>%
       iwalk( function(by_col, out_name) { 
         output[[out_name]] <- DT::renderDataTable( get_layout_key(get_plates(), by_col))
@@ -53,7 +56,8 @@ manifest_server <- function(input, output, session) {
   
   get_plates <- reactive({ req(input$id_col)
     ### TODO: Get this from UI
-    controls <- c("Hypo-methylated Control", "Hyper-methylated Control")
+    # controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control")
+    controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate")
     
     set.seed(input$seed)
     if (input$bal_type == "Disperse") { manifest <- plate_disperse(input, get_data(), controls) }
@@ -91,7 +95,7 @@ manifest_server <- function(input, output, session) {
   get_id_types <- function(plates, m_by_cols, plate_num) {
     plates %>%
       group_split(Plate) %>%
-      map(~ unite(., Sample_Type, m_by_cols)) %>% map(~ pull(., Sample_Type)) %>%
+      map(~ unite(., Sample_Type, all_of(m_by_cols))) %>% map(~ pull(., Sample_Type)) %>%
       map(~ matrix(c(., rep("", 96 - length(.))), nrow = 8, dimnames = list(LETTERS[1:8], 1:12))) %>%
       pluck(plate_num) # Move to where we use the data?
   }
