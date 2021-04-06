@@ -14,7 +14,7 @@ manifest_server <- function(input, output, session) {
           checkboxInput("show_ids", "Show IDs", value = TRUE),
           numericInput("layout_plate", "Select Plate", value = 1, min = 1, max = 5, width = "100px")),
         conditionalPanel("input.mtabs != 'Layout Facets'",
-          radioButtons("bal_type", "Balance Type", choices = c("Disperse", "Randomize")),
+          radioButtons("bal_type", "Balance Type", choices = c("Disperse", "New Disperse", "Randomize")),
           selectInput("id_col", "Sample ID Column", choices = field_names),
           checkboxGroupInput("m_by_cols", "Balance by Columns", choices = set_names(field_names),
                          select = c("site", "Age_category", "Asthma")),
