@@ -35,19 +35,17 @@ get_wells <- function(n = 1, transpose = FALSE, r = 12, c = 8) {
 }
 
 get_info <- function(samples, controls, plate_size, chip_size) {
-  n_samples <- nrow(samples)
-  n_controls <- length(controls)
-  total_plates <- ceiling( n_samples / ( plate_size - n_controls ) )
-  used_wells <- n_samples + (total_plates * n_controls)
-  
-  total_chips <- ceiling( used_wells / chip_size)
-  empty_wells <- ( total_chips * chip_size ) - used_wells
-
-  samples_per_plate <- plate_size - n_controls
-  total_controls <- total_plates * n_controls
-  
-  lst(plate_size, chip_size, n_samples, n_controls, samples_per_plate,
-      total_plates, total_chips, total_controls, empty_wells)
+  lst( plate_size, chip_size,
+    n_samples = nrow(samples),
+    n_controls = length(controls),
+    total_plates = ceiling( n_samples / ( plate_size - n_controls ) ),
+    used_wells = n_samples + (total_plates * n_controls),
+    
+    total_chips = ceiling( used_wells / chip_size),
+    empty_wells = ( total_chips * chip_size ) - used_wells,
+    
+    samples_per_plate = plate_size - n_controls,
+    total_controls = total_plates * n_controls)
 }
 
 format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
@@ -58,7 +56,7 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
   
   samples_w_wells %>%
     mutate(!!! col_vals) %>%
-    # mutate("Gender (M/F/U)" = Gender) %>%
+    mutate("Gender (M/F/U)" = Gender) %>%
     add_column_na(col_names) %>%
     select(union(col_names, c(all_of(by_cols), add_cols)))
 }
