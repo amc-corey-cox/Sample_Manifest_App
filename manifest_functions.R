@@ -96,6 +96,40 @@ plate_disperse <- function(samples, controls, seed, id_col, by_cols, use_control
     bind_rows
 }
 
+# Testing new dispersal mechanism
+plate_disperse_new <- function(samples, controls, seed, id_col, by_cols, use_controls) {
+  ## Something is weird with setting the seed and reusing the function at a different place in the code
+  # I have concerns about reproducibility
+  set.seed(seed)
+  ### TODO: get plate dimensions from UI
+  info <- get_info(samples, controls, 96, 8)
+  
+  randomized_samples <- samples %>% sample_n(n()) %>%
+    mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
+    group_split(!!! syms(by_cols)) %>% sample()
+  
+  if (info$empty_wells > 0 & use_controls) {
+    empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
+    dispersed_samples <- randomized_samples %>%
+      list_modify(empty = empty) %>% reduce(disperse)
+  }
+  else {
+    empty <- tibble("Sample ID" = rep("Empty", length.out = info$empty_wells))
+    dispersed_samples <- randomized_samples %>%
+      reduce(disperse) %>% bind_rows(empty)
+  }
+  
+  plated_samples <- dispersed_samples %>%
+    mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
+    group_split(Plate) %>% imap(~ disperse(.x, tibble("Sample ID" = controls, Plate = .y))) %>%
+    bind_rows
+  
+  plated_samples %>%
+    mutate(Chip = rep(1:info$total_chips, each = info$chip_size, length.out = n())) %>%
+    group_split(Chip) %>% map(~ sample_n(., n())) %>%
+    bind_rows
+}
+
 plate_randomize <- function(samples, controls, seed, id_col, by_cols, leave_empty = FALSE) {
   set.seed(seed)
   
