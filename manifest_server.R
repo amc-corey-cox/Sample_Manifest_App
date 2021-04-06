@@ -63,11 +63,9 @@ manifest_server <- function(input, output, session) {
     
     if (input$bal_type == "Disperse") {
       manifest <- plate_disperse(get_data(), controls, input$seed, input$id_col, input$by_cols, input$empty_wells == "Use Controls")
-    }
-    if (input$bal_type == "New Disperse") {
+    } else if (input$bal_type == "New Disperse") {
       manifest <- plate_disperse_new(get_data(), controls, input$seed, input$id_col, input$by_cols, input$empty_wells == "Use Controls")
-    }
-    if (input$bal_type == "Randomize") {
+    } else {
       manifest <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$by_cols, input$empty_wells == "Use Controls")
     }
     manifest

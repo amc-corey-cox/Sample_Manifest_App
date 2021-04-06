@@ -112,8 +112,7 @@ plate_disperse_new <- function(samples, controls, seed, id_col, by_cols, use_con
     empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
     dispersed_samples <- randomized_samples %>%
       list_modify(empty = empty) %>% reduce(disperse)
-  }
-  else {
+  } else {
     empty <- tibble("Sample ID" = rep("Empty", length.out = info$empty_wells))
     dispersed_samples <- randomized_samples %>%
       reduce(disperse) %>% bind_rows(empty)
