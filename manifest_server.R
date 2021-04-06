@@ -61,7 +61,6 @@ manifest_server <- function(input, output, session) {
     if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
     else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
     
-    set.seed(input$seed)
     if (input$bal_type == "Disperse") {
       manifest <- plate_disperse(input, get_data(), controls, input$empty_wells == "Use Controls")
     }

@@ -63,22 +63,32 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
     select(union(col_names, c(all_of(by_cols), add_cols)))
 }
 
-plate_disperse <- function(input, samples, controls, empty = NULL) {
+plate_disperse <- function(input, samples, controls, empty_use_controls = TRUE) {
+  ## Something is weird with setting the seed and reusing the function at a different place in the code
+  # I have concerns about reproducibility
+  set.seed(input$seed)
   info <- get_info(samples, controls, 96, 8)
-  
-  ### TODO: Get this from UI
-  if (info$empty_wells > 0) { empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells)) }
-  
-  dispersed_samples <- samples %>% sample_n(n()) %>%
+
+  randomized_samples <- samples %>% sample_n(n()) %>%
     mutate("Sample ID" = as.character(!!! syms(input$id_col))) %>%
-    group_split(!!! syms(input$by_cols)) %>% sample() %>%
-    list_modify(empty = empty) %>% reduce(disperse)
-  
+    group_split(!!! syms(input$by_cols)) %>% sample()
+
+  if (info$empty_wells > 0 & empty_use_controls) {
+    empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
+    dispersed_samples <- randomized_samples %>%
+      list_modify(empty = empty) %>% reduce(disperse)
+  }
+  else {
+    empty <- tibble("Sample ID" = rep("Emtpy", length.out = info$empty_wells))
+    dispersed_samples <- randomized_samples %>%
+      reduce(disperse) %>% bind_rows(empty)
+  }
+
   plated_samples <- dispersed_samples %>%
     mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
     group_split(Plate) %>% imap(~ disperse(.x, tibble("Sample ID" = controls, Plate = .y))) %>%
     bind_rows
-  
+
   plated_samples %>%
     mutate(Chip = rep(1:info$total_chips, each = info$chip_size, length.out = n())) %>%
     group_split(Chip) %>% map(~ sample_n(., n())) %>%
@@ -86,6 +96,8 @@ plate_disperse <- function(input, samples, controls, empty = NULL) {
 }
 
 plate_randomize <- function(input, samples, controls, empty = NULL) {
+  set.seed(seed)
+  
   ### TODO: get plate dimensions from UI
   info <- get_info(samples, controls, 96, 8)
   
