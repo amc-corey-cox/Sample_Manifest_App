@@ -63,7 +63,7 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
     select(union(col_names, c(all_of(by_cols), add_cols)))
 }
 
-plate_disperse <- function(samples, controls, seed, id_col, by_cols, leave_empty = FALSE) {
+plate_disperse <- function(samples, controls, seed, id_col, by_cols, use_controls) {
   ## Something is weird with setting the seed and reusing the function at a different place in the code
   # I have concerns about reproducibility
   set.seed(seed)
@@ -74,7 +74,7 @@ plate_disperse <- function(samples, controls, seed, id_col, by_cols, leave_empty
     mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
     group_split(!!! syms(by_cols)) %>% sample()
 
-  if (info$empty_wells > 0 & ! leave_empty) {
+  if (info$empty_wells > 0 & use_controls) {
     empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
     dispersed_samples <- randomized_samples %>%
       list_modify(empty = empty) %>% reduce(disperse)
