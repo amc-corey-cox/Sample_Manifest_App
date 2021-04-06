@@ -6,8 +6,10 @@ manifest_server <- function(input, output, session) {
   observeEvent(input$getPassedSamples, {
     field_names <- colnames(get_data())
     updateActionButton(session, "getPassedSamples", label = "Reload Passed Samples")
-    output$controls <- renderUI({
+    output$manifest_controls <- renderUI({
       tagList(
+        radioButtons("control_type", "Control Type", choices = c("Epic", "MEGA")),
+        radioButtons("empty_wells", "Empty Wells", choices = c("Use Controls", "Leave Empty")),
         conditionalPanel( "input.mtabs == 'Plate Layout' || input.mtabs == 'Layout Facets'",
           checkboxInput("show_ids", "Show IDs", value = TRUE),
           numericInput("layout_plate", "Select Plate", value = 1, min = 1, max = 5, width = "100px")),
@@ -27,9 +29,9 @@ manifest_server <- function(input, output, session) {
         #     checkboxGroupInput("layout_cols", "Balance by Columns", choices = set_names(field_names)))
         conditionalPanel("input.mtabs == 'Layout Facets'",
           checkboxGroupInput("layout_cols", "Balance by Columns", choices = set_names(field_names),
-            select = c("site", "Age_category", "Asthma", "Gender"))
-        )
-    )})
+            select = c("site", "Age_category", "Asthma", "Gender")))
+      )
+    })
   })
   
   output$facet_UI <- renderUI ({
@@ -56,11 +58,13 @@ manifest_server <- function(input, output, session) {
   
   get_plates <- reactive({ req(input$id_col)
     ### TODO: Get this from UI
-    # controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control")
-    controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate")
+    if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
+    else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
     
     set.seed(input$seed)
-    if (input$bal_type == "Disperse") { manifest <- plate_disperse(input, get_data(), controls) }
+    if (input$bal_type == "Disperse") {
+      manifest <- plate_disperse(input, get_data(), controls, input$empty_wells == "Use Controls")
+    }
     else { manifest <- plate_randomize(input, get_data(), controls) }
     manifest
   })
@@ -101,7 +105,7 @@ manifest_server <- function(input, output, session) {
   }
   
   get_layout <- function (plates, m_by_cols, plate_num, show_ids = TRUE) {
-    m_by_cols <- m_by_cols
+    # m_by_cols <- m_by_cols
     types <- get_layout_types(plates, m_by_cols)
     rm_str <- "-methyl.*"
     
