@@ -63,23 +63,24 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
     select(union(col_names, c(all_of(by_cols), add_cols)))
 }
 
-plate_disperse <- function(input, samples, controls, empty_use_controls = TRUE) {
+plate_disperse <- function(samples, controls, seed, id_col, by_cols, leave_empty = FALSE) {
   ## Something is weird with setting the seed and reusing the function at a different place in the code
   # I have concerns about reproducibility
-  set.seed(input$seed)
+  set.seed(seed)
+  ### TODO: get plate dimensions from UI
   info <- get_info(samples, controls, 96, 8)
 
   randomized_samples <- samples %>% sample_n(n()) %>%
-    mutate("Sample ID" = as.character(!!! syms(input$id_col))) %>%
-    group_split(!!! syms(input$by_cols)) %>% sample()
+    mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
+    group_split(!!! syms(by_cols)) %>% sample()
 
-  if (info$empty_wells > 0 & empty_use_controls) {
+  if (info$empty_wells > 0 & ! leave_empty) {
     empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
     dispersed_samples <- randomized_samples %>%
       list_modify(empty = empty) %>% reduce(disperse)
   }
   else {
-    empty <- tibble("Sample ID" = rep("Emtpy", length.out = info$empty_wells))
+    empty <- tibble("Sample ID" = rep("Empty", length.out = info$empty_wells))
     dispersed_samples <- randomized_samples %>%
       reduce(disperse) %>% bind_rows(empty)
   }
@@ -95,7 +96,7 @@ plate_disperse <- function(input, samples, controls, empty_use_controls = TRUE) 
     bind_rows
 }
 
-plate_randomize <- function(input, samples, controls, empty = NULL) {
+plate_randomize <- function(samples, controls, seed, id_col, by_cols, leave_empty = FALSE) {
   set.seed(seed)
   
   ### TODO: get plate dimensions from UI

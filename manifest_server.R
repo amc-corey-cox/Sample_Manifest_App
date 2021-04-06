@@ -62,9 +62,9 @@ manifest_server <- function(input, output, session) {
     else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
     
     if (input$bal_type == "Disperse") {
-      manifest <- plate_disperse(input, get_data(), controls, input$empty_wells == "Use Controls")
+      manifest <- plate_disperse(get_data(), controls, input$seed, input$id_col, input$by_cols, input$empty_wells == "Use Controls")
     }
-    else { manifest <- plate_randomize(input, get_data(), controls) }
+    else { manifest <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$by_cols, input$empty_wells == "Use Controls") }
     manifest
   })
   
