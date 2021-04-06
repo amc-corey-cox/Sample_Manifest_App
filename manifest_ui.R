@@ -4,7 +4,7 @@ manifest_sidebar <- div(
     radioButtons("dataSource", "Data Source", choices = c("QC", "Data"), selected = "QC"),
     actionButton("getPassedSamples", "Load Passed Samples"),
     # textOutput("debug"),
-    uiOutput("controls")
+    uiOutput("manifest_controls")
 ) )
 
 manifest_tabs <- div( style="display:inline-block; min-width: 400px; padding-left:10px; padding-top:10px",
