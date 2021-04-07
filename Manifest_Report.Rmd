@@ -3,11 +3,14 @@ title: "Sample Manifest Report"
 author: "Corey Cox"
 date: "`r Sys.Date()`"
 params:
-  seed: NA
-  plate: NA
-#   types: NA
-#   layout_colors: NA
-#   layout_key: NA
+  input: NA
+  num_plates: NA
+  plate_layouts: NA
+  layout_key: NA
+  types: NA
+  layout_colors: NA
+  facet_plates: NA
+  facet_keys: NA
 output: html_document
 ---
 
@@ -16,29 +19,24 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(DT)
 library(shiny)
+library(htmlwidgets)
+```
+## Manifest Parameters
+* Random Seed: **`r params$input$seed`**
+* Controls Selected: **`r params$input$control_type`**
+* Sample Balance method: **`r params$input$bal_type`**
+  + Columns for Balance: **`r params$input$m_by_cols`**
+  + Column for Sample ID: **`r params$input$id_col`**
+  + Empty Wells: **`r params$input$empty_wells`**
+
+## Plate Layouts
+```{r echo=FALSE}
+tagList(params$layout_key, params$plate_layouts)
 ```
 
-```{r}
-print("This is a test")
+## Layout Facets
+```{r echo=FALSE}
+tagList(
+  map(1:length(params$facet_keys),
+      ~ lst(params$facet_keys[.], params$facet_plates[.])))
 ```
-
-## Manifest Sample Report
-
-### Random Seed: `r params$seed`
-
-
-```{r echo=FALSE, fig.keep = 'all', message=FALSE, results = 'hide', warning=FALSE}
-```
-
-```{r}
-params$plate
-```
-
-```{r echo=FALSE, render='as-is'}
-# params$summaryTable
-```
-
-```{r echo=FALSE, results='hide', warning=FALSE}
-# params$myGridPlots
-```
-
