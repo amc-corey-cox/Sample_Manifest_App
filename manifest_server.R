@@ -14,7 +14,7 @@ manifest_server <- function(input, output, session) {
           checkboxInput("show_ids", "Show IDs", value = TRUE),
           numericInput("layout_plate", "Select Plate", value = 1, min = 1, max = 5, width = "100px")),
         conditionalPanel("input.mtabs != 'Layout Facets'",
-          radioButtons("bal_type", "Balance Type", choices = c("Disperse", "New Disperse", "Randomize")),
+          radioButtons("bal_type", "Balance Type", choices = c("Grouped Disperse", "Simple Disperse", "Randomize")),
           selectInput("id_col", "Sample ID Column", choices = field_names),
           checkboxGroupInput("m_by_cols", "Balance by Columns", choices = set_names(field_names),
                          select = c("site", "Age_category", "Asthma")),
@@ -61,12 +61,12 @@ manifest_server <- function(input, output, session) {
     if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
     else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
     
-    if (input$bal_type == "Disperse") {
-      plates <- plate_disperse(get_data(), controls, input$seed, input$id_col, input$by_cols, input$empty_wells == "Use Controls")
-    } else if (input$bal_type == "New Disperse") {
-      plates <- plate_disperse_new(get_data(), controls, input$seed, input$id_col, input$by_cols, input$empty_wells == "Use Controls")
+    if (input$bal_type == "Simple Disperse") {
+      plates <- plate_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells == "Use Controls")
+    } else if (input$bal_type == "Grouped Disperse") {
+      plates <- plate_disperse_new(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells == "Use Controls")
     } else {
-      plates <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$by_cols, input$empty_wells == "Use Controls")
+      plates <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells == "Use Controls")
     }
     plates
   })

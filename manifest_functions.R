@@ -2,8 +2,6 @@ col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate
                "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
                "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
 
-# controls <- c("Hypo-methylated Control", "Hyper-methylated control")
-
 add_column_na <- function(d, col_names) {
   add_cols <- col_names %>% setdiff(colnames(d))
   if(length(add_cols) != 0) d[add_cols] <- NA
@@ -62,8 +60,6 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
 }
 
 plate_disperse <- function(samples, controls, seed, id_col, by_cols, use_controls) {
-  ## Something is weird with setting the seed and reusing the function at a different place in the code
-  # I have concerns about reproducibility
   set.seed(seed)
   ### TODO: get plate dimensions from UI
   info <- get_info(samples, controls, 96, 8)
@@ -94,26 +90,33 @@ plate_disperse <- function(samples, controls, seed, id_col, by_cols, use_control
     bind_rows
 }
 
+col_split <- function(.data, split_on) {
+  len <- length(split_on)
+  if(len == 0) { return(.data) }
+  map_depth(col_split(.data, split_on[-len]), .depth = len - 1, ~ group_split(., !! sym(split_on[len])))
+}
+
+multi_reduce <- function(.x, .f) {
+  if(is_tibble(.x[[1]])) { return(reduce(.x, .f)) }
+  map(.x, ~ multi_reduce(.x, .f)) %>% reduce(.f)
+}
+
 # Testing new dispersal mechanism
 plate_disperse_new <- function(samples, controls, seed, id_col, by_cols, use_controls) {
-  ## Something is weird with setting the seed and reusing the function at a different place in the code
-  # I have concerns about reproducibility
   set.seed(seed)
   ### TODO: get plate dimensions from UI
   info <- get_info(samples, controls, 96, 8)
   
   randomized_samples <- samples %>% sample_n(n()) %>%
     mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
-    group_split(!!! syms(by_cols)) %>% sample()
+    col_split(by_cols) %>% multi_reduce(disperse)
   
   if (info$empty_wells > 0 & use_controls) {
     empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
-    dispersed_samples <- randomized_samples %>%
-      list_modify(empty = empty) %>% reduce(disperse)
+    dispersed_samples <- disperse(randomized_samples, empty)
   } else {
     empty <- tibble("Sample ID" = rep("Empty", length.out = info$empty_wells))
-    dispersed_samples <- randomized_samples %>%
-      reduce(disperse) %>% bind_rows(empty)
+    dispersed_samples <-bind_rows(randomized_samples, empty)
   }
   
   plated_samples <- dispersed_samples %>%
@@ -137,7 +140,7 @@ plate_randomize <- function(samples, controls, seed, id_col, by_cols, leave_empt
   if (info$empty_wells > 0) { empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells)) }
   
   randomized_samples <- samples %>% sample_n(n()) %>%
-    mutate("Sample ID" = as.character(!!! syms(input$id_col))) %>%
+    mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
     list(data = ., empty = empty) %>% reduce(disperse)
   
   randomized_samples %>% mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
