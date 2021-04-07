@@ -1,5 +1,5 @@
 manifest_sidebar <- div(
-  style = "min-width: 220px; max-width: 220px;",
+  style = "min-width: 240px; max-width: 240px;",
   wellPanel( # sidebar
     radioButtons("dataSource", "Data Source", choices = c("QC", "Data"), selected = "QC"),
     actionButton("getPassedSamples", "Load Passed Samples"),
@@ -7,7 +7,7 @@ manifest_sidebar <- div(
     uiOutput("manifest_controls")
 ) )
 
-manifest_tabs <- div( style="display:inline-block; min-width: 400px; padding-left:10px; padding-top:10px",
+manifest_tabs <- div( style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
   tabsetPanel( 
     id = "mtabs", type = "pills",
     tabPanel( "Passed QC", br(), DT::dataTableOutput("passedQC") ),
