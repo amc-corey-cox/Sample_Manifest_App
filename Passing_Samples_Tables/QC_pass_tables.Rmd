@@ -162,7 +162,7 @@ QC_metrics_upset <- function(x, intx) {
   upset(x, intx, wrap = TRUE, width_ratio = 0.1, sort_sets = FALSE,
         base_annotations = list('Subjects Passing Metric Sets' = intersection_size(counts = TRUE, mapping = aes(fill = site))),
         set_sizes=( upset_set_size() + theme(axis.text.x=element_text(angle=45)) +
-                      scale_y_continuous(breaks = pretty_breaks(n = 3))))
+                      scale_y_continuous(breaks = breaks_pretty(n = 3), trans = "reverse")))
 }
 
 # QC_metrics_upset <- function(x, intx) {
@@ -187,5 +187,37 @@ QC_metrics_upset(PBMC_DNA_presummary, c("PBMC_cellcounts", DNA_metrics)) + labs(
 PBMC_RNA_presummary <- read_tsv("PBMC_RNA_presummaryTable.tsv") %>%
   mutate(across(c("PBMC_cellcounts", RNA_metrics), ~ .x == "PASS"))
 QC_metrics_upset(PBMC_RNA_presummary, c("PBMC_cellcounts", RNA_metrics)) + labs(title = "PBMC RNA Passing Metrics")
+
+all_sample_sites <- bind_rows(Nasal_RNA_presummary, Nasal_DNA_presummary, PBMC_DNA_presummary, PBMC_RNA_presummary) %>%
+  select(subject, site, Asthma) %>% filter(! duplicated(subject))
+
+psomagen_rna <- read_tsv("Psomagen_CAAPA2_RNA_QC.txt")
+
+psomagen_rna_upset <- psomagen_rna %>% left_join(all_sample_sites, by = c("sample" = "subject")) %>%
+  mutate(
+    "<200ng" = `amount(ng)` < 200,
+    "200-300ng" = `amount(ng)` >= 200 & `amount(ng)` < 300,
+    "300-400ng" = `amount(ng)` >= 300 & `amount(ng)` < 400,
+    "200-400ng" = `amount(ng)` >= 200 & `amount(ng)` < 400,
+    "400-500ng" = `amount(ng)` >= 400 & `amount(ng)` < 500,
+    ">500ng" = `amount(ng)` >= 500,
+    "400-600ng" = `amount(ng)` >= 400 & `amount(ng)` < 600,
+    ">600ng" = `amount(ng)` >= 600,
+    "Asthma Case" = Asthma == "Case",
+    "Asthma Control" = Asthma == "Control")
+
+psomagen_rna_upset %>%
+  upset(c("<200ng", "200-400ng", "400-600ng", ">600ng", "Asthma Case", "Asthma Control"),
+        wrap = TRUE, width_ratio = 0.1, sort_sets = FALSE,
+        base_annotations = list('Subjects Passing Metric Sets' = intersection_size(counts = TRUE, mapping = aes(fill = site))),
+        set_sizes=( upset_set_size() + theme(axis.text.x=element_text(angle=45)) +
+    scale_y_continuous(breaks = breaks_pretty(n = 3), trans = "reverse")))
+
+psomagen_rna_upset %>%
+  upset(c("<200ng", "200-300ng", "300-400ng", "400-500ng", ">500ng", "Asthma Case", "Asthma Control"),
+        wrap = TRUE, width_ratio = 0.1, sort_sets = FALSE,
+        base_annotations = list('Subjects Passing Metric Sets' = intersection_size(counts = TRUE, mapping = aes(fill = site))),
+        set_sizes=( upset_set_size() + theme(axis.text.x=element_text(angle=45)) +
+    scale_y_continuous(breaks = breaks_pretty(n = 3), trans = "reverse")))
 ```
 
