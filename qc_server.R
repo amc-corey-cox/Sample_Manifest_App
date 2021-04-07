@@ -1,6 +1,3 @@
-library(tidyverse)
-library(shiny)
-
 qc_server <- function(input, output, session) { 
   mylist <- reactiveVal()
   observeEvent(
@@ -195,7 +192,7 @@ qc_server <- function(input, output, session) {
   # })
   
   observeEvent(input$runScript, {
-    env_list <<- mylist()
+    env_list <- mylist()
     save(env_list, file = "env_list.RData")
     source("./source_plots_shiny.R", local = list2env(mylist()))
     load("savePlots.RData")
@@ -310,6 +307,21 @@ qc_server <- function(input, output, session) {
       ))
     })
   })
+  
+  output$qcReport <- downloadHandler(
+    # For PDF output, change this to "report.pdf"
+    filename = function() { paste('QC_Report-', Sys.Date(), '.html', sep='') },
+    content = function(con) {
+      # load("env_list.RData")
+      load("savePlots.RData")
+      params <- list(env_list = mylist(), cGram = cGram, summaryTable = summaryTable, myGridPlots = myGridPlots)
+      render("QC_Sample_Report.Rmd", output_file = con,
+                        params = params,
+                        # Can I just use globalenv() and not pass params? 
+                        envir = new.env(parent = globalenv())
+      )
+    }
+  )
   
   # output$MyPlot <- renderPlot({
   #

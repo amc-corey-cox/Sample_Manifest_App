@@ -23,7 +23,8 @@ manifest_server <- function(input, output, session) {
           # selectInput("col_vals", "Select Values", choices = c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood'),
           #             selected = c("Species", "Tissue Source")),
           numericInput("seed", "Set Random Seed", value = 44),
-          downloadButton("downloadManifest", "Download Manifest")
+          downloadButton("downloadManifest", "Download Manifest"),
+          downloadButton("manifestReport", "Download Manifest Report")
         ),
         # conditionalPanel("input.mtabs == 'Layout Facets'",
         #     checkboxGroupInput("layout_cols", "Balance by Columns", choices = set_names(field_names)))
@@ -118,6 +119,8 @@ manifest_server <- function(input, output, session) {
     id_types <- get_id_types(plates, m_by_cols, plate_num)
     layout_colors <- get_layout_colors(length(types))
     
+    if(data_only) { return(cbind(display_ids, id_types)) }
+    
     cbind(display_ids, id_types) %>%
       datatable(class = 'cell-border stripe', 
         options = list(dom = 't', pageLength = 8, columnDefs = list(list(visible = FALSE, targets = 13:24)))) %>%
@@ -148,6 +151,19 @@ manifest_server <- function(input, output, session) {
   output$downloadManifest <- downloadHandler(
     filename = function() { paste('Manifest-', Sys.Date(), '.xlsx', sep='') },
     content = function(con) { write.xlsx(get_manifest_m(), file = con, showNA = FALSE) })
+  
+  output$manifestReport <- downloadHandler(
+    # For PDF output, change this to "report.pdf"
+    filename = function() { paste('Manifest_Report-', Sys.Date(), '.html', sep='') },
+    content = function(con) {
+      params <- list(seed = input$seed,
+                     plate = DT::renderDataTable(get_layout(get_plates(), input$m_by_cols, input$layout_plate, input$show_ids)) 
+                     )
+      render("Manifest_Report.Rmd", output_file = con,
+             params = params,
+             # Can I just use globalenv() and not pass params? 
+             envir = new.env(parent = globalenv())
+  )})
   
   output$plateLayout <- DT::renderDataTable(get_layout(get_plates(), input$m_by_cols, input$layout_plate, input$show_ids))
   output$layoutKey <- DT::renderDataTable(get_layout_key(get_plates(), input$m_by_cols))
