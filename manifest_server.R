@@ -107,7 +107,7 @@ manifest_server <- function(input, output, session) {
       pluck(plate_num) # Move to where we use the data?
   }
   
-  get_layout <- function (plates, m_by_cols, plate_num, show_ids = TRUE, data_only = FALSE) {
+  get_layout <- function (plates, m_by_cols, plate_num, show_ids = TRUE) {
     # m_by_cols <- m_by_cols
     types <- get_layout_types(plates, m_by_cols)
     rm_str <- "-methyl.*"
@@ -119,10 +119,8 @@ manifest_server <- function(input, output, session) {
     id_types <- get_id_types(plates, m_by_cols, plate_num)
     layout_colors <- get_layout_colors(length(types))
     
-    if(data_only) { return(cbind(display_ids, id_types)) }
-    
     cbind(display_ids, id_types) %>%
-      datatable(class = 'cell-border stripe', 
+      datatable(class = 'cell-border stripe', height = "100%", width = "100%",
         options = list(dom = 't', pageLength = 8, columnDefs = list(list(visible = FALSE, targets = 13:24)))) %>%
       formatStyle(columns = 1:12, valueColumns = 13:24,
                   backgroundColor = styleEqual(levels = types, values = layout_colors))
@@ -141,7 +139,7 @@ manifest_server <- function(input, output, session) {
     bg_color <- styleEqual(levels = all_types, values = get_layout_colors(length(all_types)))
     
     matrix(c(types, type_names), nrow = 1) %>%
-      datatable(colnames = rep("", ncol(.)), options = dt_opts) %>%
+      datatable(colnames = rep("", ncol(.)), options = dt_opts, height = "100%", width = "100%") %>%
       formatStyle(columns = col_nums + length(types), valueColumns = col_nums,
                   backgroundColor = bg_color, color = "#FFFFFF")
   }
@@ -156,9 +154,18 @@ manifest_server <- function(input, output, session) {
     # For PDF output, change this to "report.pdf"
     filename = function() { paste('Manifest_Report-', Sys.Date(), '.html', sep='') },
     content = function(con) {
-      params <- list(seed = input$seed,
-                     plate = DT::renderDataTable(get_layout(get_plates(), input$m_by_cols, input$layout_plate, input$show_ids)) 
-                     )
+      params <- lst(input = input,
+                    num_plates = 4,
+                    plate_layouts = 1:num_plates %>% set_names %>%
+                      map(~ get_layout(get_plates(), input$m_by_cols, ., input$show_ids)),
+                    layout_key = get_layout_key(get_plates(), input$m_by_cols),
+                    types = get_layout_types(get_plates(), input$m_by_cols),
+                    layout_colors = layout_colors <- get_layout_colors(length(types)),
+                    facet_plates = input$layout_cols %>% set_names %>%
+                      map(~ map2(., 1:num_plates, ~ get_layout(get_plates(), .x, .y, input$show_ids) )),
+                    facet_keys = input$layout_cols %>% set_names(str_c(., "_key")) %>%
+                      map( ~ get_layout_key(get_plates(), .)))
+      
       render("Manifest_Report.Rmd", output_file = con,
              params = params,
              # Can I just use globalenv() and not pass params? 

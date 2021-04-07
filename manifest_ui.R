@@ -14,8 +14,7 @@ manifest_tabs <- div( style="display:inline-block; min-width: 400px; padding-lef
     tabPanel( "Manifest", br(), DT::dataTableOutput("manifestTable")),
     tabPanel( "Plate Layout", br(),
       div(DT::dataTableOutput("layoutKey"), style = "font-size:80%"),
-        DT::dataTableOutput("plateLayout"),
-        uiOutput("layoutFacets")),
+      DT::dataTableOutput("plateLayout")),
     tabPanel( "Layout Facets", uiOutput("facet_UI"))
 ) )
 
