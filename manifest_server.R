@@ -29,7 +29,7 @@ manifest_server <- function(input, output, session) {
         # conditionalPanel("input.mtabs == 'Layout Facets'",
         #     checkboxGroupInput("layout_cols", "Balance by Columns", choices = set_names(field_names)))
         conditionalPanel("input.mtabs == 'Layout Facets'",
-          checkboxGroupInput("layout_cols", "Balance by Columns", choices = set_names(field_names),
+          checkboxGroupInput("layout_cols", "Facet Columns", choices = set_names(field_names),
             select = c("site", "Age_category", "Asthma", "Gender")))
       )
     })
@@ -107,7 +107,7 @@ manifest_server <- function(input, output, session) {
       pluck(plate_num) # Move to where we use the data?
   }
   
-  get_layout <- function (plates, m_by_cols, plate_num, show_ids = TRUE) {
+  get_layout <- function (plates, m_by_cols, plate_num, show_ids = TRUE, data_only = FALSE) {
     # m_by_cols <- m_by_cols
     types <- get_layout_types(plates, m_by_cols)
     rm_str <- "-methyl.*"
