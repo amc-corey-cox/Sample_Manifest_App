@@ -62,11 +62,11 @@ manifest_server <- function(input, output, session) {
     else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
     
     if (input$bal_type == "Simple Disperse") {
-      plates <- plate_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells == "Use Controls")
+      plates <- simple_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
     } else if (input$bal_type == "Grouped Disperse") {
-      plates <- plate_disperse_new(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells == "Use Controls")
+      plates <- grouped_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
     } else {
-      plates <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells == "Use Controls")
+      plates <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
     }
     plates
   })

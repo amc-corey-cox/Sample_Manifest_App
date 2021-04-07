@@ -59,7 +59,7 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
     select(union(col_names, c(all_of(by_cols), add_cols)))
 }
 
-plate_disperse <- function(samples, controls, seed, id_col, by_cols, use_controls) {
+simple_disperse <- function(samples, controls, seed, id_col, by_cols, empty_wells) {
   set.seed(seed)
   ### TODO: get plate dimensions from UI
   info <- get_info(samples, controls, 96, 8)
@@ -68,7 +68,7 @@ plate_disperse <- function(samples, controls, seed, id_col, by_cols, use_control
     mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
     group_split(!!! syms(by_cols)) %>% sample()
 
-  if (info$empty_wells > 0 & use_controls) {
+  if (info$empty_wells > 0 & empty_wells == "Use Controls") {
     empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
     dispersed_samples <- randomized_samples %>%
       list_modify(empty = empty) %>% reduce(disperse)
@@ -102,7 +102,7 @@ multi_reduce <- function(.x, .f) {
 }
 
 # Testing new dispersal mechanism
-plate_disperse_new <- function(samples, controls, seed, id_col, by_cols, use_controls) {
+grouped_disperse <- function(samples, controls, seed, id_col, by_cols, empty_wells) {
   set.seed(seed)
   ### TODO: get plate dimensions from UI
   info <- get_info(samples, controls, 96, 8)
@@ -111,7 +111,7 @@ plate_disperse_new <- function(samples, controls, seed, id_col, by_cols, use_con
     mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
     col_split(by_cols) %>% multi_reduce(disperse)
   
-  if (info$empty_wells > 0 & use_controls) {
+  if (info$empty_wells > 0 & empty_wells == "Use Controls") {
     empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
     dispersed_samples <- disperse(randomized_samples, empty)
   } else {
@@ -130,20 +130,24 @@ plate_disperse_new <- function(samples, controls, seed, id_col, by_cols, use_con
     bind_rows
 }
 
-plate_randomize <- function(samples, controls, seed, id_col, by_cols, leave_empty = FALSE) {
+plate_randomize <- function(samples, controls, seed, id_col, by_cols, empty_wells) {
   set.seed(seed)
   
   ### TODO: get plate dimensions from UI
   info <- get_info(samples, controls, 96, 8)
   
-  ### TODO: Allow options for empty wells in UI
-  if (info$empty_wells > 0) { empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells)) }
-  
   randomized_samples <- samples %>% sample_n(n()) %>%
-    mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
-    list(data = ., empty = empty) %>% reduce(disperse)
+    mutate("Sample ID" = as.character(!!! syms(id_col)))
   
-  randomized_samples %>% mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
+  if (info$empty_wells > 0 & empty_wells == "Use Controls") {
+    empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
+    dispersed_samples <- disperse(randomized_samples, empty)
+  } else {
+    empty <- tibble("Sample ID" = rep("Empty", length.out = info$empty_wells))
+    dispersed_samples <-bind_rows(randomized_samples, empty)
+  }
+  
+  dispersed_samples %>% mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
     group_split(Plate) %>% imap(~ disperse(.x, tibble("Sample ID" = controls, Plate = .y))) %>%
     bind_rows
 }
