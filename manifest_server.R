@@ -14,7 +14,7 @@ manifest_server <- function(input, output, session) {
           checkboxInput("show_ids", "Show IDs", value = TRUE),
           numericInput("layout_plate", "Select Plate", value = 1, min = 1, max = 5, width = "100px")),
         conditionalPanel("input.mtabs != 'Layout Facets'",
-          radioButtons("bal_type", "Balance Type", choices = c("Disperse", "Randomize")),
+          radioButtons("bal_type", "Balance Type", choices = c("Grouped Disperse", "Simple Disperse", "Randomize")),
           selectInput("id_col", "Sample ID Column", choices = field_names),
           checkboxGroupInput("m_by_cols", "Balance by Columns", choices = set_names(field_names),
                          select = c("site", "Age_category", "Asthma")),
@@ -61,12 +61,14 @@ manifest_server <- function(input, output, session) {
     if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
     else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
     
-    set.seed(input$seed)
-    if (input$bal_type == "Disperse") {
-      manifest <- plate_disperse(input, get_data(), controls, input$empty_wells == "Use Controls")
+    if (input$bal_type == "Simple Disperse") {
+      plates <- simple_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
+    } else if (input$bal_type == "Grouped Disperse") {
+      plates <- grouped_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
+    } else {
+      plates <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
     }
-    else { manifest <- plate_randomize(input, get_data(), controls) }
-    manifest
+    plates
   })
   
   get_manifest_m <- reactive({
