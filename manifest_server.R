@@ -57,8 +57,13 @@ manifest_server <- function(input, output, session) {
     forCorey
   })
   
+  get_controls <- reactive({
+    if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
+    else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
+    controls
+  })
+  
   get_plates <- reactive({ req(input$id_col)
-    ### TODO: Get this from UI
     if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
     else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
     
@@ -108,7 +113,6 @@ manifest_server <- function(input, output, session) {
   }
   
   get_layout <- function (plates, m_by_cols, plate_num, show_ids = TRUE) {
-    # m_by_cols <- m_by_cols
     types <- get_layout_types(plates, m_by_cols)
     rm_str <- "-methyl.*"
     
@@ -155,7 +159,8 @@ manifest_server <- function(input, output, session) {
     filename = function() { paste('Manifest_Report-', Sys.Date(), '.html', sep='') },
     content = function(con) {
       params <- lst(input = input,
-                    num_plates = 4,
+                    info = get_info(get_data(), get_controls(), 96, 8),
+                    num_plates = info$total_plates,
                     plate_layouts = 1:num_plates %>% set_names %>%
                       map(~ get_layout(get_plates(), input$m_by_cols, ., input$show_ids)),
                     layout_key = get_layout_key(get_plates(), input$m_by_cols),
@@ -169,13 +174,9 @@ manifest_server <- function(input, output, session) {
       render("Manifest_Report.Rmd", output_file = con,
              params = params,
              # Can I just use globalenv() and not pass params? 
-             envir = new.env(parent = globalenv())
-  )})
+             envir = new.env(parent = globalenv()))
+    })
   
   output$plateLayout <- DT::renderDataTable(get_layout(get_plates(), input$m_by_cols, input$layout_plate, input$show_ids))
   output$layoutKey <- DT::renderDataTable(get_layout_key(get_plates(), input$m_by_cols))
-
-  # output$debug <- renderText({ # req(input$fileUploaded)
-  #   input$mtabs
-  # })
 }

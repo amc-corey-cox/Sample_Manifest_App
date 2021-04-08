@@ -4,6 +4,7 @@ author: "Corey Cox"
 date: "`r Sys.Date()`"
 params:
   input: NA
+  info: NA
   num_plates: NA
   plate_layouts: NA
   layout_key: NA
@@ -29,13 +30,18 @@ library(htmlwidgets)
   + Column for Sample ID: **`r params$input$id_col`**
   + Empty Wells: **`r params$input$empty_wells`**
 
+## Sample & Plate Info
+```{r echo = FALSE}
+params$info %>% as_tibble %>% datatable(options = list(dom = 't', ordering = FALSE))
+```
+
 ## Plate Layouts
-```{r echo=FALSE}
+```{r echo = FALSE}
 tagList(params$layout_key, params$plate_layouts)
 ```
 
 ## Layout Facets
-```{r echo=FALSE}
+```{r echo = FALSE}
 tagList(
   map(1:length(params$facet_keys),
       ~ lst(params$facet_keys[.], params$facet_plates[.])))

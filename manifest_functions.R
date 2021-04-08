@@ -39,7 +39,7 @@ get_info <- function(samples, controls, plate_size, chip_size) {
     total_plates = ceiling( n_samples / ( plate_size - n_controls ) ),
     used_wells = n_samples + (total_plates * n_controls),
     
-    total_chips = ceiling( used_wells / chip_size),
+    total_chips = ceiling( used_wells / chip_size ),
     empty_wells = ( total_chips * chip_size ) - used_wells,
     
     samples_per_plate = plate_size - n_controls,
