@@ -1,0 +1,74 @@
+---
+title: "CAAPA2 All Omics Upset"
+author: "Corey Cox"
+date: "2/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(purrr)
+library(UpSetR)
+library(ComplexUpset)
+library(table1)
+library(scales)
+```
+
+## CAAPA2 All Omics UpSet
+
+```{r get_manifests}
+PBMC_DNA <- "../InputData/PBMC_DNA_Final_for_plots_072320_updated.csv" %>% read_csv
+PBMC_RNA <- "../InputData/PBMC_RNA_Final_for_plots_072320_updated.csv" %>% read_csv
+Nasal_RNA <- "../InputData/Nasal_RNA_Final_for_plots_072320_updated.csv" %>% read_csv
+Nasal_DNA <- "../InputData/Nasal_DNA_Final_for_plots_072320_updated.csv" %>% read_csv
+
+input_all_MEGA <- full_join(PBMC_DNA, PBMC_RNA, by = c("subject", "site", "Age_category", "Asthma", "Gender")) %>%
+  full_join(Nasal_RNA, by = c("subject", "site", "Age_category", "Asthma", "Gender")) %>%
+  full_join(Nasal_DNA, by = c("subject", "site", "Age_category", "Asthma", "Gender")) %>%
+  mutate("MEGA" = TRUE, `Sample ID` = as.character(subject),
+         `Gender (M/F/U)` = recode(Gender, "2" = "Female", "1" = "Male"),
+         Asthma = recode(Asthma, "2" = "Case", "1" = "Control"))
+
+Nasal_DNA_epic <- "~/Documents/Sample_Manifests/CAAPA2/Nasal_DNA/CAAPA2_Nasal_DNA_EPIC_Manifest-2021-04-07.xlsx" %>%
+  read_excel %>% mutate("Nasal Methylation - Epic" = TRUE)
+Nasal_DNA_allergy <- "~/Documents/Sample_Manifests/CAAPA2/Nasal_DNA/CAAPA2_Nasal_DNA_Custom_Allergy_Manifest-2021-04-07.xlsx" %>%
+  read_excel %>% mutate("Nasal Methylation - Allergy" = TRUE)
+Nasal_RNA_psomagen <- "~/Documents/Sample_Manifests/CAAPA2/Nasal_RNA/CAAPA2_nasal_RNA_FINAL_manifest_for_Psomagen.xlsx" %>%
+  read_excel %>% mutate("Nasal RNAseq" = TRUE)
+
+nasal_all_input <- full_join(Nasal_DNA_epic, Nasal_DNA_allergy, suffix = c("_epic", "_allergy"),
+                         by = c("Sample ID", "site", "Age_category", "Asthma", "Gender (M/F/U)")) %>%
+  full_join(Nasal_RNA_psomagen, suffix = c("", "_allergy"),
+                         by = c("Sample ID", "site", "Age_category", "Asthma", "Gender (M/F/U)"))
+
+all_input <- full_join(nasal_all_input, input_all_MEGA, suffix = c("", "_MEGA"),
+                       by = c("Sample ID", "site", "Age_category", "Asthma", "Gender (M/F/U)")) %>%
+  select(`Sample ID`, site, Age_category, Asthma, Gender = "Gender (M/F/U)", contains("Nasal"), MEGA) %>%
+  replace_na(list("Nasal Methylation - Epic" = FALSE, "Nasal Methylation - Allergy" = FALSE, "Nasal RNAseq" = FALSE, "MEGA = FALSE")) %>%
+  filter(str_detect(`Sample ID`, "ethyl|mpty", negate = TRUE)) %>%
+  mutate(Asthma = ifelse(`Sample ID` == 10205085, "Case", Asthma),
+         Asthma = ifelse(`Sample ID` == 10207029, "Control", Asthma))
+
+upset(all_input, c("Nasal Methylation - Epic", "Nasal Methylation - Allergy", "Nasal RNAseq", "MEGA"),
+      base_annotations = list('Subjects with Omics' = intersection_size(counts = TRUE, mapping = aes(fill = site))),
+      annotations = list("Case Status" = ggplot(mapping = aes(fill = Asthma)) +
+                           geom_bar(stat='count', position='fill') +
+                           scale_y_continuous(labels=scales::percent_format()) +
+                           scale_fill_manual(values=c("light green", "dark green")) +
+                           ylab("Case/Control Status"),
+                         "Age Category" = ggplot(mapping = aes(fill = Age_category)) +
+                           geom_bar(stat='count', position='fill') +
+                           scale_y_continuous(labels=scales::percent_format()) +
+                           scale_fill_manual(values=c("light blue", "dark blue")) +
+                           ylab("Age Category")),
+      width_ratio=0.1)
+```
+
+```{r}
+
+```
+
+
