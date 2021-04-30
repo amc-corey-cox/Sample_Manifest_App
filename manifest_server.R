@@ -86,6 +86,7 @@ manifest_server <- function(input, output, session) {
   get_layout_types <- function(plates, m_by_cols) {
     m_by_cols %>% set_names %>%
       map( ~ pull(plates, .) %>% na.omit() %>% unique() ) %>%
+      # map( ~ pull(plates, .) %>% replace_na(as.list(rep("Missing", length(m_by_cols))) %>% set_names(m_by_cols)) %>% unique() ) %>%
       expand.grid() %>% unite(Sample_Type, all_of(m_by_cols)) %>%
       arrange(Sample_Type) %>% pull(Sample_Type) %>% c("NA_NA_NA")
   }

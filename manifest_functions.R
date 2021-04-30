@@ -54,7 +54,7 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
   
   samples_w_wells %>%
     mutate(!!! col_vals) %>%
-    mutate("Gender (M/F/U)" = Gender) %>%
+    # mutate("Gender (M/F/U)" = Gender) %>%
     add_column_na(col_names) %>%
     select(union(col_names, c(all_of(by_cols), add_cols)))
 }
@@ -109,6 +109,8 @@ grouped_disperse <- function(samples, controls, seed, id_col, by_cols, empty_wel
   
   randomized_samples <- samples %>% sample_n(n()) %>%
     mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
+    # Make this a setting... set NA to missing
+    # replace_na(as.list(rep("Missing", length(by_cols))) %>% set_names(by_cols)) %>%
     col_split(by_cols) %>% multi_reduce(disperse)
   
   if (info$empty_wells > 0 & empty_wells == "Use Controls") {
