@@ -20,24 +20,25 @@ data_server <- function(input, output, session) {
   #   do.call(tabsetPanel, myTabs)
   # })
   
-  # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
-  read_pheno <<- reactive({
-    # return()
-    if (is.na(excel_format(input$files$datapath))) {
-      pheno <- read_delim(input$files$datapath, col_names = input$col_names,
-                          delim = input$delim, quote = input$quote, skip = input$skip)
+  # Move this to a utilities file?
+  import_file <<- function(file, col_names, delim, quote, skip) {
+    if (is.na(excel_format(file))) {
+      file <- read_delim(file, col_names = col_names,
+                          delim = delim, quote = quote, skip = skip)
     } else {
-      pheno <- read_excel( input$files$datapath, skip = input$skip, col_names = input$col_names)
+      file <- read_excel(file, skip = skip, col_names = col_names)
     }
-    updateSelectInput(session, "d_id_col", choices = colnames(pheno))
-    map(list("align_cols", "clean_cols", "filter_cols", "by_cols"),
-        ~ updateCheckboxGroupInput(session, .x, choices = set_names(colnames(pheno))))
-    return(pheno)
-  })
+    file
+  }
   
   # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
   get_pheno <<- reactive({ req(input$files)
-    pheno <- read_pheno()
+    # pheno <- read_pheno()
+    pheno <- import_file(input$files$datapath, input$col_names, input$delim, input$quote, input$skip)
+    updateSelectInput(session, "d_id_col", choices = colnames(pheno))
+    updateSelectInput(session, "m_id_col_2", choices = colnames(pheno))
+    map(list("align_cols", "clean_cols", "filter_cols", "by_cols"),
+        ~ updateCheckboxGroupInput(session, .x, choices = set_names(colnames(pheno))))
     req(input$d_id_col %in% colnames(pheno))
     pheno %>% rename("Sample ID" = input$d_id_col) %>%
       mutate(`Sample ID` = as.character(`Sample ID`))
@@ -52,7 +53,7 @@ data_server <- function(input, output, session) {
   
   filter_pheno <- reactive({
     filters <- c("") #SHINY use paste to create this from user input
-    clean_pheno() %>% filter(!!! parse_exprs(filters))
+    clean_pheno() # %>% filter(!!! parse_exprs(filters))
   })
   
   get_manifest_d <- reactive({ req(input$by_cols)
@@ -71,7 +72,6 @@ data_server <- function(input, output, session) {
   output$pheno <- renderTable({ createTableOutput(get_pheno()) })
   output$cleaned_pheno <- renderTable({ createTableOutput(clean_pheno()) })
   output$filtered_pheno <- renderTable({ createTableOutput(filter_pheno()) })
-  output$manifest <- renderTable({ createTableOutput(get_manifest_d()) })
   
   output$d_downloadManifest <- downloadHandler(
     filename = function() {

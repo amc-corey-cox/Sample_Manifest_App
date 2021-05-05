@@ -32,7 +32,7 @@ txt_ctrl <- function() {
 
 id_ctrl <- conditionalPanel( condition = "output.fileUploaded",
                     # radioButtons("id_radio", "Sample ID Column", choices = c(1))
-                    selectInput("d_id_col", "Sample ID Column", choices = NULL)
+                    selectInput("d_id_col", "ID Column Name", choices = NULL)
   )
 
 data_ui <- tabPanel( titlePanel("Load Data"),
@@ -64,12 +64,7 @@ data_ui <- tabPanel( titlePanel("Load Data"),
         condition = "input.d_tabs == 'Cleanup'",
         checkboxGroupInput("clean_cols", "Convert Columns to Number", choices = NULL),
         p("Select Columns to remove all non-digits and convert to number.")
-      ),
-      conditionalPanel(
-        condition = "input.d_tabs == 'Manifest'",
-        checkboxGroupInput("by_cols", "Balance by Columns", choices = NULL)
-      )
-    ),
+      )),
     mainPanel(
       tabsetPanel(
         id = "d_tabs",
@@ -77,7 +72,7 @@ data_ui <- tabPanel( titlePanel("Load Data"),
         # tabPanel( "Phenotype", uiOutput('uploadUI') ),
         tabPanel("Phenotype", tableOutput("pheno")),
         tabPanel("Cleanup", tableOutput("cleaned_pheno")),
-        tabPanel("Manifest", tableOutput("manifest"))
+        tabPanel("Filter", tableOutput("filtered_pheno"))
       )
     )
   )
