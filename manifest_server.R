@@ -3,6 +3,20 @@ source("manifest_functions.R", local = TRUE)
 my_colors <- c(stepped2(), stepped3(4), "#DDDDDD")
 
 manifest_server <- function(input, output, session) {
+  output$templateUploaded <- reactive({ return(!is.null(input$template)) })
+  outputOptions(output, 'templateUploaded', suspendWhenHidden = FALSE)
+  
+  output$templateExcel <- reactive({
+    if (!is.null(input$template) &&
+        !is.na(excel_format(input$template$datapath))) {
+      updateSelectInput(session, "tmp_sheet", choices = excel_sheets(input$template$datapath))
+      return(TRUE)
+    }
+    updateSelectInput(session, "tmp_sheet", choices = character(0))
+    return(FALSE)
+  })
+  outputOptions(output, 'fileExcel', suspendWhenHidden = FALSE)
+  
   observeEvent(input$getPassedSamples, {
     field_names <- colnames(get_data())
     updateActionButton(session, "getPassedSamples", label = "Reload Passed Samples")
@@ -85,7 +99,16 @@ manifest_server <- function(input, output, session) {
   get_manifest_m <- reactive({
     ### TODO: Get this from UI
     col_vals <- c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood') #SHINY get default values from user.
-    format_manifest(get_plates(), input$m_by_cols, input$add_cols, col_vals)
+    if (! is.null(input$template)) {
+      col_names <- import_file(input$template$datapath, col_names = TRUE, input$tmp_delim, input$tmp_quote, input$tmp_skip) %>%
+        colnames
+    } else {
+      col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate", "Well", "Sample Well", "Species",
+                     "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
+                     "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
+    }
+    updateSelectInput(session, "m_id_col_1", choices = col_names)
+    format_manifest(get_plates(), input$m_by_cols, input$add_cols, col_vals, col_names)
   })
   
   get_layout_types <- function(plates, m_by_cols) {

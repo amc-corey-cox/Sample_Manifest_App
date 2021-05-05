@@ -1,9 +1,24 @@
 manifest_sidebar <- div(
   style = "min-width: 240px; max-width: 240px;",
   wellPanel( # sidebar
-    radioButtons("dataSource", "Data Source", choices = c("QC", "Data"), selected = "QC"),
-    actionButton("getPassedSamples", "Load Passed Samples"),
+    conditionalPanel(condition = "input.mtabs == 'Passed QC'",
+      radioButtons("dataSource", "Data Source", choices = c("QC", "Data"), selected = "QC"),
+      actionButton("getPassedSamples", "Load Passed Samples")),
     # textOutput("debug"),
+    conditionalPanel(condition = "input.mtabs == 'Manifest'",
+      fileInput("template", "Upload Manifest Template", multiple = FALSE,
+        accept = c(".csv", ".xls", ".xlsx", "text/csv", "text/comma-separated-values,text/plain", "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")),
+        # conditionalPanel(condition = "output.templateUploaded",
+        #   numericInput("tmp_skip", "Skip lines:", 0, min = 0),
+        #   p("Align Data and Manifest Columns"),
+        #   splitLayout(
+        #     selectInput("m_id_col_1", "Manifest Col", choices = NULL),
+        #     selectInput("m_id_col_2", "Data Col", choices = NULL)
+        #   )),
+      conditionalPanel(condition = "output.templateUploaded",
+        numericInput("tmp_skip", "Skip lines:", 0, min = 0)),
+    ),
     uiOutput("manifest_controls")
 ) )
 

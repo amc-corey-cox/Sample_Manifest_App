@@ -1,7 +1,3 @@
-col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate", "Well", "Sample Well", "Species",
-               "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
-               "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
-
 add_column_na <- function(d, col_names) {
   add_cols <- col_names %>% setdiff(colnames(d))
   if(length(add_cols) != 0) d[add_cols] <- NA
@@ -46,7 +42,7 @@ get_info <- function(samples, controls, plate_size, chip_size) {
     total_controls = total_plates * n_controls)
 }
 
-format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
+format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL, col_names) {
   samples_w_wells <- samples %>%
     group_split(Plate) %>%
     map(~ mutate(., Well = get_wells(1, transpose = TRUE) %>% head(n()))) %>%
@@ -119,17 +115,20 @@ grouped_disperse <- function(samples, controls, seed, id_col, by_cols, empty_wel
   ### TODO: get plate dimensions from UI
   info <- get_info(samples, controls, 96, 8)
   
+  id_name <- "Sample ID"
+  # id_name <- "Subject ID"
+  
   randomized_samples <- samples %>% sample_n(n()) %>%
-    mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
+    mutate(!! id_name := as.character(!!! syms(id_col))) %>%
     # Make this a setting... set NA to missing
     # replace_na(as.list(rep("Missing", length(by_cols))) %>% set_names(by_cols)) %>%
     col_split(by_cols) %>% multi_reduce(disperse)
   
   if (info$empty_wells > 0 & empty_wells == "Use Controls") {
-    empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
+    empty <- tibble(!! id_name := rep(controls, length.out = info$empty_wells))
     dispersed_samples <- disperse(randomized_samples, empty)
   } else {
-    empty <- tibble("Sample ID" = rep("Empty", length.out = info$empty_wells))
+    empty <- tibble(!! id_name := rep("Empty", length.out = info$empty_wells))
     dispersed_samples <-bind_rows(randomized_samples, empty)
   }
   
