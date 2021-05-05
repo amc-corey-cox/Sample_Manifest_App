@@ -67,11 +67,10 @@ manifest_server <- function(input, output, session) {
   get_plates <- reactive({ req(input$id_col)
     controls <- get_controls()
     
-    
-    if (input$bal_type == "Simple Disperse") {
-      plates <- simple_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
-    } else if (input$bal_type == "Grouped Disperse") {
+    if (input$bal_type == "Grouped Disperse") {
       plates <- grouped_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
+    } else if (input$bal_type == "Simple Disperse") {
+       plates <- simple_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
     } else {
       plates <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
     }
