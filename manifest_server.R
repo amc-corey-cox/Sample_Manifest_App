@@ -8,7 +8,7 @@ manifest_server <- function(input, output, session) {
     updateActionButton(session, "getPassedSamples", label = "Reload Passed Samples")
     output$manifest_controls <- renderUI({
       tagList(
-        radioButtons("control_type", "Control Type", choices = c("Epic", "MEGA")),
+        radioButtons("control_type", "Control Type", choices = c("None", "Epic", "MEGA")),
         radioButtons("empty_wells", "Empty Wells", choices = c("Use Controls", "Leave Empty")),
         conditionalPanel( "input.mtabs == 'Plate Layout' || input.mtabs == 'Layout Facets'",
           checkboxInput("show_ids", "Show IDs", value = TRUE),
@@ -58,14 +58,15 @@ manifest_server <- function(input, output, session) {
   })
   
   get_controls <- reactive({
-    if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
-    else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
+    if(input$control_type == "MEGA") {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
+    else if(input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
+    else { controls <- character() }
     controls
   })
   
   get_plates <- reactive({ req(input$id_col)
-    if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
-    else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
+    controls <- get_controls()
+    
     
     if (input$bal_type == "Simple Disperse") {
       plates <- simple_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
