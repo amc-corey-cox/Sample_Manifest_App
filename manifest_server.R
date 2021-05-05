@@ -99,6 +99,8 @@ manifest_server <- function(input, output, session) {
   get_manifest_m <- reactive({
     ### TODO: Get this from UI
     col_vals <- c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood') #SHINY get default values from user.
+    # col_vals for WGS, this is a quick hack for now... try to do better in the future!
+    # col_vals <- c('Specimen type' = 'Saliva', Instrument = 'NovaSeq') #SHINY get default values from user.
     if (! is.null(input$template)) {
       col_names <- import_file(input$template$datapath, col_names = TRUE, input$tmp_delim, input$tmp_quote, input$tmp_skip) %>%
         colnames
@@ -108,7 +110,7 @@ manifest_server <- function(input, output, session) {
                      "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
     }
     updateSelectInput(session, "m_id_col_1", choices = col_names)
-    format_manifest(get_plates(), input$m_by_cols, input$add_cols, col_vals, col_names)
+    format_manifest(get_plates(), input$m_by_cols, input$add_cols, col_vals, col_names) 
   })
   
   get_layout_types <- function(plates, m_by_cols) {
@@ -189,7 +191,7 @@ manifest_server <- function(input, output, session) {
     content = function(con) {
       params <- lst(input = input,
                     info = get_info(get_data(), get_controls(), 96, 8),
-                    num_plates = info$total_plates,
+                    num_plates = ifelse(is.na(input$num_plates), info$total_plates, input$num_plates),
                     plate_layouts = 1:num_plates %>% set_names %>%
                       map(~ get_layout(get_plates(), input$m_by_cols, ., input$show_ids)),
                     layout_key = get_layout_key(get_plates(), input$m_by_cols),
