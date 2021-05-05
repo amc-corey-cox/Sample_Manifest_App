@@ -23,6 +23,7 @@ manifest_server <- function(input, output, session) {
           # selectInput("col_vals", "Select Values", choices = c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood'),
           #             selected = c("Species", "Tissue Source")),
           numericInput("seed", "Set Random Seed", value = 44),
+          numericInput("num_plates", "Number of Plates", value = NA_integer_),
           downloadButton("downloadManifest", "Download Manifest"),
           downloadButton("manifestReport", "Download Manifest Report")
         ),
@@ -74,7 +75,11 @@ manifest_server <- function(input, output, session) {
     } else {
       plates <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
     }
-    plates
+    if (is.na(input$num_plates)) {
+      return (plates)
+    } else {
+      plates %>% filter(Plate <= input$num_plates) %>% return
+    }
   })
   
   get_manifest_m <- reactive({
