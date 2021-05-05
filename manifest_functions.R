@@ -50,6 +50,8 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL, col_nam
   
   samples_w_wells %>%
     mutate(!!! col_vals) %>%
+    # Rename Plate and Well for WGS template, dirty hack
+    # mutate("Sample Plate" = Plate, "Sample well" = Well) %>%
     # mutate("Gender (M/F/U)" = Gender) %>%
     add_column_na(col_names) %>%
     select(union(col_names, c(all_of(by_cols), add_cols)))
@@ -116,7 +118,8 @@ grouped_disperse <- function(samples, controls, seed, id_col, by_cols, empty_wel
   info <- get_info(samples, controls, 96, 8)
   
   id_name <- "Sample ID"
-  # id_name <- "Subject ID"
+  # id_name for WGS, this is a quick hack for now we should do this better in the future.
+  # id_name <- "Subject_ID"
   
   randomized_samples <- samples %>% sample_n(n()) %>%
     mutate(!! id_name := as.character(!!! syms(id_col))) %>%
