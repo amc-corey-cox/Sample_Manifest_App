@@ -24,7 +24,7 @@ id_ctrl <- conditionalPanel(
   # radioButtons("id_radio", "Sample ID Column", choices = c(1))
   selectInput("d_id_col", "ID Column Name", choices = NULL))
 
-data_sidebar <- div(
+data_panel <- div(
   style = "min-width: 240px; max-width: 240px;",
   wellPanel(
     conditionalPanel(
@@ -49,13 +49,13 @@ data_tabs <- div(
     tabPanel("Filter", tableOutput("filtered_pheno"))
 ))
 
-data_ui <- tabPanel( titlePanel("Load Data"),
+data_ui <- tabPanel(titlePanel("Import Data"),
   splitLayout(
     cellWidths = c("60%", "20%", "20%"),
-    titlePanel("CARGO Manifest Generator", windowTitle = "CARGO Manifest Generator"),
+    titlePanel("Load and Prepare Data"),
     radioButtons("disp", "Display", selected = "head", inline = TRUE, choices = c(Head = "head", All = "all")),
     downloadButton("d_downloadManifest", "Download"),
     tags$style(type = 'text/css', "#disp { margin-top: 15px; }"),
     tags$style(type = 'text/css', "#d_downloadManifest { margin-top: 20px; }")
   ),
-  flowLayout(data_sidebar, data_tabs))
+  flowLayout(data_panel, data_tabs))

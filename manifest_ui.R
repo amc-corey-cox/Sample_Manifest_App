@@ -1,4 +1,4 @@
-manifest_sidebar <- div(
+manifest_panel <- div(
   style = "min-width: 240px; max-width: 240px;",
   wellPanel( # sidebar
     conditionalPanel(condition = "input.mtabs == 'Passed QC'",
@@ -34,6 +34,6 @@ manifest_tabs <- div(
     tabPanel( "Layout Facets", uiOutput("facet_UI"))
 ))
 
-manifest_main <- flowLayout(manifest_sidebar, manifest_tabs)
+tmp <- "Create Manifest and Reports"
 
-manifest_ui <- tabPanel(titlePanel("Plate Samples"), mainPanel( manifest_main ))
+manifest_ui <- tabPanel(titlePanel("Plate Samples"), flowLayout(manifest_panel, manifest_tabs))
