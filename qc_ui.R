@@ -49,6 +49,8 @@ qc_panel <- div(
       selected = "No"
     ),
     
+    # These 4 sets of tags remove the bar on the 4 lower-threshold only sliders.
+    ## TODO: A better solution is to set upper and lower thresholds and define them based on the data
     tags$head(
       tags$style(
         type = "text/css",
@@ -272,4 +274,12 @@ qc_main <- div(
     )
   )
 
-qc_ui <- tabPanel(titlePanel("Quality Control"), flowLayout(qc_panel, qc_main))
+qc_ui <- tabPanel(
+  titlePanel("QC Metrics"),
+  splitLayout(
+    cellWidths = c("60%", "20%"),
+    titlePanel("Sample Quality Control"),
+    downloadButton("qc_download", "Get QC Report"),
+    tags$style(type = 'text/css', "#qc_download { margin-top: 20px; }")
+  ),
+  flowLayout(qc_panel, qc_main))

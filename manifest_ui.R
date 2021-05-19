@@ -36,4 +36,16 @@ manifest_tabs <- div(
 
 tmp <- "Create Manifest and Reports"
 
-manifest_ui <- tabPanel(titlePanel("Plate Samples"), flowLayout(manifest_panel, manifest_tabs))
+manifest_ui <- tabPanel(
+  titlePanel("Plate Samples"),
+  splitLayout(
+    cellWidths = c("40%", "20%", "20%", "20%"),
+    titlePanel("Plating & Manifest"),
+    radioButtons("m_disp", "Display", selected = "head", inline = TRUE, choices = c(Head = "head", All = "all")),
+    downloadButton("m_manifest", "Get Manifest"),
+    downloadButton("m_report", "Get Manifest Report"),
+    tags$style(type = 'text/css', "#m_disp { margin-top: 15px; }"),
+    tags$style(type = 'text/css', "#m_manifest { margin-top: 20px; }"),
+    tags$style(type = 'text/css', "#m_report { margin-top: 20px; }")
+  ),
+  flowLayout(manifest_panel, manifest_tabs))
