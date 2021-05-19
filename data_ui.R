@@ -1,39 +1,28 @@
-upload_ctrl <- function() {
+upload_ctrl <- fileInput("files", "Upload Phenotype File", multiple = FALSE,
   # fileInput("files", "Upload Phenotype File", multiple = TRUE,
-  fileInput("files", "Upload Phenotype File", multiple = FALSE,
-            accept = c(".csv", ".xls", ".xlsx", "text/csv",
-                       "text/comma-separated-values,text/plain",
-                       "application/vnd.ms-excel",
-                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-  )
-}
+  accept = c(".csv", ".xls", ".xlsx", "text/csv",
+             "text/comma-separated-values,text/plain",
+             "application/vnd.ms-excel",
+             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
 
-file_ctrl <- function() {
-  conditionalPanel( condition = "output.fileUploaded",
+file_ctrl <- conditionalPanel( condition = "output.fileUploaded",
                     checkboxInput("col_names", "Column names in header", TRUE),
-                    numericInput("skip", "Skip lines:", 0, min = 0)
-  )
-}
+                    numericInput("skip", "Skip lines:", 0, min = 0))
 
-excel_ctrl <- function() {
-  conditionalPanel( condition = "output.fileExcel",
-                    selectInput("sheet", "Sheet", choices = NULL)
-  )
-}
+excel_ctrl <- conditionalPanel( condition = "output.fileExcel",
+                    selectInput("sheet", "Sheet", choices = NULL))
 
-txt_ctrl <- function() {
-  conditionalPanel( condition = "output.fileUploaded && ! output.fileExcel",
-                    radioButtons("delim", "Separator", selected = "\t",
-                                 choices = c(Comma = ",", Semicolon = ";", Tab = "\t")),
-                    radioButtons("quote", "Quote", selected = '"',
-                                 choices = c(None = "", "Double Quote" = '"', "Single Quote" = "'")),
-  )
-}
+txt_ctrl <- conditionalPanel(
+  condition = "output.fileUploaded && ! output.fileExcel",
+  radioButtons("delim", "Separator", selected = "\t",
+    choices = c(Comma = ",", Semicolon = ";", Tab = "\t")),
+  radioButtons("quote", "Quote", selected = '"',
+    choices = c(None = "", "Double Quote" = '"', "Single Quote" = "'")))
 
-id_ctrl <- conditionalPanel( condition = "output.fileUploaded",
-                    # radioButtons("id_radio", "Sample ID Column", choices = c(1))
-                    selectInput("d_id_col", "ID Column Name", choices = NULL)
-  )
+id_ctrl <- conditionalPanel(
+  condition = "output.fileUploaded",
+  # radioButtons("id_radio", "Sample ID Column", choices = c(1))
+  selectInput("d_id_col", "ID Column Name", choices = NULL))
 
 data_ui <- tabPanel( titlePanel("Load Data"),
   splitLayout(
@@ -54,10 +43,10 @@ data_ui <- tabPanel( titlePanel("Load Data"),
     sidebarPanel(
       conditionalPanel(
         condition = "input.d_tabs == 'Phenotype'",
-        upload_ctrl(),
-        file_ctrl(),
-        excel_ctrl(),
-        txt_ctrl()
+        upload_ctrl,
+        file_ctrl,
+        excel_ctrl,
+        txt_ctrl
       ),
       conditionalPanel(condition = "input.d_tabs == 'Phenotype' || input.d_tabs == 'Cleanup'", id_ctrl),
       conditionalPanel(
