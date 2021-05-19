@@ -51,11 +51,10 @@ data_tabs <- div(
 
 data_ui <- tabPanel(titlePanel("Import Data"),
   splitLayout(
-    cellWidths = c("60%", "20%", "20%"),
+    cellWidths = c("55%", "20%", "25%"),
     titlePanel("Load and Prepare Data"),
     radioButtons("disp", "Display", selected = "head", inline = TRUE, choices = c(Head = "head", All = "all")),
-    downloadButton("d_downloadManifest", "Download"),
+    downloadButton("d_downloadManifest", "Get Clean/Filtered Data"),
     tags$style(type = 'text/css', "#disp { margin-top: 15px; }"),
-    tags$style(type = 'text/css', "#d_downloadManifest { margin-top: 20px; }")
-  ),
+    tags$style(type = 'text/css', "#d_downloadManifest { margin-top: 20px; }")),
   flowLayout(data_panel, data_tabs))
