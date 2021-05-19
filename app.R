@@ -21,7 +21,7 @@ source("qc_ui.R", local = TRUE)
 source("manifest_ui.R", local = TRUE)
 
 ui <- shinyUI(fluidPage(
-  titlePanel("CAAPA2 QC Metrics"),
+  titlePanel("CARGO Manifest Generator", windowTitle = "CARGO Manifest Generator"),
   tabsetPanel( id = "top_tabs", data_ui, qc_ui, manifest_ui )
   
   # tabsetPanel( id = "top_tabs", qc_ui, manifest_ui )
