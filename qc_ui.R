@@ -1,6 +1,6 @@
-qc_ui <- tabPanel(
-  titlePanel("Data Setup & QC"),
-  sidebarPanel(
+qc_panel <- div(
+  style = "min-width: 240px; max-width: 240px;",
+  wellPanel(
     tags$h4("Testing Sites"),
     checkboxInput("includeBaltimore", "Baltimore", TRUE),
     checkboxInput("includeBrazil", "Brazil", TRUE),
@@ -207,68 +207,69 @@ qc_ui <- tabPanel(
     actionButton("runScript", "Run QC & Generate Plots"),
     downloadButton("qcReport", "Download QC Report"),
     tags$h6(
-      "Email christopher.arehart@cuanschutz.edu to report bugs or provide suggestions"
-    )
-  ),
+      "Email Corey.Cox@CUAnschutz.edu to report bugs or provide suggestions"
+)))
   
   ### TODO: Move figures and tables to live figures within app
-  titlePanel("Summary Figures"),
-  mainPanel(
+qc_main <- div(
+  style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
+    titlePanel("Quality Control Figures"),
     plotOutput("cGram", width = "auto", height = "520px"),
-    uiOutput("mytable")
-  ),
-  
-  fluidRow(
-    # column(5,
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots1")
-    ),
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots2")
-    ),
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots3")
-    ),
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots4")
-    ),
-    # plotlyOutput("myGridPlots5"),
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots6")
-    ),
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots7")
-    ),
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots8")
-    ),
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots11")
-    ),
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots12")
-    ),
-    column(
-      width = 6,
-      offset = 0,
-      plotlyOutput("myGridPlots16")
+    uiOutput("mytable"),
+    fluidRow(
+      # column(5,
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots1")
+      ),
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots2")
+      ),
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots3")
+      ),
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots4")
+      ),
+      # plotlyOutput("myGridPlots5"),
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots6")
+      ),
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots7")
+      ),
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots8")
+      ),
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots11")
+      ),
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots12")
+      ),
+      column(
+        width = 6,
+        offset = 0,
+        plotlyOutput("myGridPlots16")
+      )
     )
-  ))
+  )
+
+qc_ui <- tabPanel(titlePanel("Quality Control"), flowLayout(qc_panel, qc_main))
