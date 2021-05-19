@@ -38,33 +38,24 @@ data_sidebar <- div(
       condition = "input.d_tabs == 'Cleanup'",
       checkboxGroupInput("clean_cols", "Convert Columns to Number", choices = NULL),
       p("Select Columns to remove all non-digits and convert to number.")
-    )))
+)))
 
 data_tabs <- div(
   style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
-  tabsetPanel(
-    id = "d_tabs",
-    type = "pills",
+  tabsetPanel(id = "d_tabs", type = "pills",
     # tabPanel( "Phenotype", uiOutput('uploadUI') ),
     tabPanel("Phenotype", tableOutput("pheno")),
     tabPanel("Cleanup", tableOutput("cleaned_pheno")),
     tabPanel("Filter", tableOutput("filtered_pheno"))
-  ))
+))
 
 data_ui <- tabPanel( titlePanel("Load Data"),
   splitLayout(
     cellWidths = c("60%", "20%", "20%"),
     titlePanel("CARGO Manifest Generator", windowTitle = "CARGO Manifest Generator"),
-    radioButtons(
-      "disp",
-      "Display",
-      selected = "head",
-      inline = TRUE,
-      choices = c(Head = "head", All = "all")
-    ),
+    radioButtons("disp", "Display", selected = "head", inline = TRUE, choices = c(Head = "head", All = "all")),
     downloadButton("d_downloadManifest", "Download"),
     tags$style(type = 'text/css', "#disp { margin-top: 15px; }"),
     tags$style(type = 'text/css', "#d_downloadManifest { margin-top: 20px; }")
   ),
-  flowLayout( data_sidebar, data_tabs )
-)
+  flowLayout(data_sidebar, data_tabs))

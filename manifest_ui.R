@@ -20,10 +20,11 @@ manifest_sidebar <- div(
         numericInput("tmp_skip", "Skip lines:", 0, min = 0)),
     ),
     uiOutput("manifest_controls")
-) )
+))
 
-manifest_tabs <- div( style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
-  tabsetPanel( 
+manifest_tabs <- div(
+  style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
+  tabsetPanel(
     id = "mtabs", type = "pills",
     tabPanel( "Passed QC", br(), DT::dataTableOutput("passedQC") ),
     tabPanel( "Manifest", br(), DT::dataTableOutput("manifestTable")),
@@ -31,8 +32,8 @@ manifest_tabs <- div( style="display:inline-block; min-width: 400px; padding-lef
       div(DT::dataTableOutput("layoutKey"), style = "font-size:80%"),
       DT::dataTableOutput("plateLayout")),
     tabPanel( "Layout Facets", uiOutput("facet_UI"))
-) )
+))
 
-manifest_main <- flowLayout( manifest_sidebar, manifest_tabs )
+manifest_main <- flowLayout(manifest_sidebar, manifest_tabs)
 
-manifest_ui <- tabPanel( titlePanel("Plate Samples"), mainPanel( manifest_main ) )
+manifest_ui <- tabPanel(titlePanel("Plate Samples"), mainPanel( manifest_main ))
