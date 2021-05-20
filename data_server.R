@@ -37,14 +37,19 @@ data_server <- function(input, output, session) {
   }
   
   # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
-  get_pheno <<- reactive({ req(input$files)
-    # pheno <- read_pheno()
+  read_pheno <<- reactive({ req(input$files)
     pheno <- import_file(input$files$datapath, input$col_names, input$delim, input$quote, input$skip)
     updateSelectInput(session, "d_id_col", choices = colnames(pheno))
     updateSelectInput(session, "m_id_col_2", choices = colnames(pheno))
     map(list("align_cols", "filter_cols", "by_cols"),
         ~ updateCheckboxGroupInput(session, .x, choices = set_names(colnames(pheno))))
     vals$data <- pheno
+  })
+  
+  # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
+  get_pheno <<- reactive({ req(input$files)
+    # pheno <- read_pheno()
+    pheno <- read_pheno()
     req(input$d_id_col %in% colnames(pheno))
     pheno %>% rename("Sample ID" = input$d_id_col) %>%
       mutate(`Sample ID` = as.character(`Sample ID`))
