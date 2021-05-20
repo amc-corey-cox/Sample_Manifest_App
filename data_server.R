@@ -6,19 +6,24 @@ data_server <- function(input, output, session) {
     if (!is.null(input$files) &&
         !is.na(excel_format(input$files$datapath))) {
       updateSelectInput(session, "sheet", choices = excel_sheets(input$files$datapath))
+      # updateSelectInput(session, "clean_col_1", choices = c("None", colnames(get_pheno())))
       return(TRUE)
     }
     updateSelectInput(session, "sheet", choices = character(0))
     return(FALSE)
   })
   outputOptions(output, 'fileExcel', suspendWhenHidden = FALSE)
+  vals <- reactiveValues(data = NULL)
   
-  # output$uploadUI <- renderUI({ req(input$files)
-  #   nTabs = nrow(input$files)
-  #   myTabs <- map(input$files$name, tabPanel)
-  #   # myTabs = lapply(paste('Tab', 1: nTabs), tabPanel)
-  #   do.call(tabsetPanel, myTabs)
-  # })
+  observe({ req(input$files)
+    output$ui_clean_cols <- renderUI({ req(input$files)
+      tagList(
+        varSelectInput("clean_cols", "Column(s) to Number", multiple = TRUE, data = vals$data),
+        p("Select Columns to remove all non-digits and convert to number."),
+        varSelectInput("na_cols", "NA to Missing", multiple = TRUE, data = vals$data),
+        p('Select Columns to convert "NA" to "Missing"'))
+    })
+  })
   
   # Move this to a utilities file?
   import_file <<- function(file, col_names, delim, quote, skip) {
@@ -37,18 +42,21 @@ data_server <- function(input, output, session) {
     pheno <- import_file(input$files$datapath, input$col_names, input$delim, input$quote, input$skip)
     updateSelectInput(session, "d_id_col", choices = colnames(pheno))
     updateSelectInput(session, "m_id_col_2", choices = colnames(pheno))
-    map(list("align_cols", "clean_cols", "filter_cols", "by_cols"),
+    map(list("align_cols", "filter_cols", "by_cols"),
         ~ updateCheckboxGroupInput(session, .x, choices = set_names(colnames(pheno))))
+    vals$data <- pheno
     req(input$d_id_col %in% colnames(pheno))
     pheno %>% rename("Sample ID" = input$d_id_col) %>%
       mutate(`Sample ID` = as.character(`Sample ID`))
   })
   
   clean_pheno <- reactive({
-    # clean_cols <- c("Avg [ng/ul]", "% CV")
-    clean <- function(s) { str_remove_all(s, "[^[:digit:].]") %>% as.double() }
-    get_pheno() %>%
-      mutate_at(input$clean_cols, clean)
+    make_numeric <- function(x) { str_remove_all(x, "[^[:digit:].]") %>% as.double() }
+    na_to_missing <- function(x) { ifelse(is.na(x), "Missing", x) }
+    
+    get_pheno() %>% mutate(
+      across(as.character(input$clean_cols), make_numeric),
+      across(as.character(input$na_cols), na_to_missing))
   })
   
   filter_pheno <- reactive({

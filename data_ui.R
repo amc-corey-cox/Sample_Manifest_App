@@ -36,8 +36,7 @@ data_panel <- div(
     conditionalPanel(condition = "input.d_tabs == 'Phenotype' || input.d_tabs == 'Cleanup'", id_ctrl),
     conditionalPanel(
       condition = "input.d_tabs == 'Cleanup'",
-      checkboxGroupInput("clean_cols", "Convert Columns to Number", choices = NULL),
-      p("Select Columns to remove all non-digits and convert to number.")
+      uiOutput("ui_clean_cols")
 )))
 
 data_tabs <- div(
