@@ -55,13 +55,15 @@ data_server <- function(input, output, session) {
       mutate(`Sample ID` = as.character(`Sample ID`))
   })
   
-  clean_pheno <- reactive({
+  clean_pheno <<- reactive({
     make_numeric <- function(x) { str_remove_all(x, "[^[:digit:].]") %>% as.double() }
     na_to_missing <- function(x) { ifelse(is.na(x), "Missing", x) }
     
-    get_pheno() %>% mutate(
-      across(as.character(input$clean_cols), make_numeric),
-      across(as.character(input$na_cols), na_to_missing))
+    get_pheno() %>%
+      when(length(input$clean_cols) < 1 ~ .,
+           mutate(., across(as.character(input$clean_cols), make_numeric))) %>%
+      when(length(input$na_cols) < 1 ~ .,
+           mutate(., across(as.character(input$na_cols), na_to_missing)))
   })
   
   filter_pheno <- reactive({
