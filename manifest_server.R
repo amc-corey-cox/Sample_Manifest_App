@@ -67,7 +67,7 @@ manifest_server <- function(input, output, session) {
   })
   
   get_data <- eventReactive(input$getPassedSamples, {
-    if (input$dataSource == "Data") { return (get_pheno()) }
+    if (input$dataSource == "Data") { return (clean_pheno()) }
     load("savePassed.RData")
     forCorey
   })
