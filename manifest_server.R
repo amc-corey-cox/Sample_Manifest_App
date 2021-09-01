@@ -167,7 +167,7 @@ manifest_server <- function(input, output, session) {
     types <-  plates %>% unite(Sample_Type, m_by_cols) %>%
       arrange(Sample_Type) %>% pull(Sample_Type) %>% unique() %>% intersect(all_types, .)
     
-    type_names <- types %>% str_replace("NA.*", "Control") %>% str_replace_all("_", " ")
+    type_names <- types # %>% str_replace("NA.*", "Control") %>% str_replace_all("_", " ")
     col_nums <- 1:length(types)
     
     dt_opts <- list(dom = 't', columnDefs = list(list(visible = FALSE, targets = col_nums - 1)))
