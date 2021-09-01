@@ -3,6 +3,7 @@ qc_panel <- div(
   wellPanel(
     tags$h4("Testing Sites"),
     checkboxInput("includeBaltimore", "Baltimore", TRUE),
+    checkboxInput("includeBarbados", "Barbados", TRUE),
     checkboxInput("includeBrazil", "Brazil", TRUE),
     checkboxInput("includeChicago", "Chicago", TRUE),
     checkboxInput("includeDenver", "Denver", TRUE),
