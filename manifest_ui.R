@@ -1,14 +1,30 @@
-manifest_sidebar <- div(
+manifest_panel <- div(
   style = "min-width: 240px; max-width: 240px;",
   wellPanel( # sidebar
-    radioButtons("dataSource", "Data Source", choices = c("QC", "Data"), selected = "QC"),
-    actionButton("getPassedSamples", "Load Passed Samples"),
+    conditionalPanel(condition = "input.mtabs == 'Passed QC'",
+      radioButtons("dataSource", "Data Source", choices = c("QC", "Data"), selected = "QC"),
+      actionButton("getPassedSamples", "Load Passed Samples")),
     # textOutput("debug"),
+    conditionalPanel(condition = "input.mtabs == 'Manifest'",
+      fileInput("template", "Upload Manifest Template", multiple = FALSE,
+        accept = c(".csv", ".xls", ".xlsx", "text/csv", "text/comma-separated-values,text/plain", "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")),
+        # conditionalPanel(condition = "output.templateUploaded",
+        #   numericInput("tmp_skip", "Skip lines:", 0, min = 0),
+        #   p("Align Data and Manifest Columns"),
+        #   splitLayout(
+        #     selectInput("m_id_col_1", "Manifest Col", choices = NULL),
+        #     selectInput("m_id_col_2", "Data Col", choices = NULL)
+        #   )),
+      conditionalPanel(condition = "output.templateUploaded",
+        numericInput("tmp_skip", "Skip lines:", 0, min = 0)),
+    ),
     uiOutput("manifest_controls")
-) )
+))
 
-manifest_tabs <- div( style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
-  tabsetPanel( 
+manifest_tabs <- div(
+  style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
+  tabsetPanel(
     id = "mtabs", type = "pills",
     tabPanel( "Passed QC", br(), DT::dataTableOutput("passedQC") ),
     tabPanel( "Manifest", br(), DT::dataTableOutput("manifestTable")),
@@ -16,8 +32,20 @@ manifest_tabs <- div( style="display:inline-block; min-width: 400px; padding-lef
       div(DT::dataTableOutput("layoutKey"), style = "font-size:80%"),
       DT::dataTableOutput("plateLayout")),
     tabPanel( "Layout Facets", uiOutput("facet_UI"))
-) )
+))
 
-manifest_main <- flowLayout( manifest_sidebar, manifest_tabs )
+tmp <- "Create Manifest and Reports"
 
-manifest_ui <- tabPanel( titlePanel("Plate Samples"), mainPanel( manifest_main ) )
+manifest_ui <- tabPanel(
+  titlePanel("Plate Samples"),
+  splitLayout(
+    cellWidths = c("40%", "20%", "20%", "20%"),
+    titlePanel("Plating & Manifest"),
+    radioButtons("m_disp", "Display", selected = "head", inline = TRUE, choices = c(Head = "head", All = "all")),
+    downloadButton("m_manifest", "Get Manifest"),
+    downloadButton("m_report", "Get Manifest Report"),
+    tags$style(type = 'text/css', "#m_disp { margin-top: 15px; }"),
+    tags$style(type = 'text/css', "#m_manifest { margin-top: 20px; }"),
+    tags$style(type = 'text/css', "#m_report { margin-top: 20px; }")
+  ),
+  flowLayout(manifest_panel, manifest_tabs))

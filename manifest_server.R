@@ -3,12 +3,26 @@ source("manifest_functions.R", local = TRUE)
 my_colors <- c(stepped2(), stepped3(4), "#DDDDDD")
 
 manifest_server <- function(input, output, session) {
+  output$templateUploaded <- reactive({ return(!is.null(input$template)) })
+  outputOptions(output, 'templateUploaded', suspendWhenHidden = FALSE)
+  
+  output$templateExcel <- reactive({
+    if (!is.null(input$template) &&
+        !is.na(excel_format(input$template$datapath))) {
+      updateSelectInput(session, "tmp_sheet", choices = excel_sheets(input$template$datapath))
+      return(TRUE)
+    }
+    updateSelectInput(session, "tmp_sheet", choices = character(0))
+    return(FALSE)
+  })
+  outputOptions(output, 'fileExcel', suspendWhenHidden = FALSE)
+  
   observeEvent(input$getPassedSamples, {
     field_names <- colnames(get_data())
     updateActionButton(session, "getPassedSamples", label = "Reload Passed Samples")
     output$manifest_controls <- renderUI({
       tagList(
-        radioButtons("control_type", "Control Type", choices = c("Epic", "MEGA")),
+        radioButtons("control_type", "Control Type", choices = c("None", "Epic", "MEGA")),
         radioButtons("empty_wells", "Empty Wells", choices = c("Use Controls", "Leave Empty")),
         conditionalPanel( "input.mtabs == 'Plate Layout' || input.mtabs == 'Layout Facets'",
           checkboxInput("show_ids", "Show IDs", value = TRUE),
@@ -23,6 +37,7 @@ manifest_server <- function(input, output, session) {
           # selectInput("col_vals", "Select Values", choices = c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood'),
           #             selected = c("Species", "Tissue Source")),
           numericInput("seed", "Set Random Seed", value = 44),
+          numericInput("num_plates", "Number of Plates", value = NA_integer_),
           downloadButton("downloadManifest", "Download Manifest"),
           downloadButton("manifestReport", "Download Manifest Report")
         ),
@@ -52,35 +67,50 @@ manifest_server <- function(input, output, session) {
   })
   
   get_data <- eventReactive(input$getPassedSamples, {
-    if (input$dataSource == "Data") { return (get_pheno()) }
+    if (input$dataSource == "Data") { return (clean_pheno()) }
     load("savePassed.RData")
     forCorey
   })
   
   get_controls <- reactive({
-    if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
-    else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
+    if(input$control_type == "MEGA") {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
+    else if(input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
+    else { controls <- character() }
     controls
   })
   
   get_plates <- reactive({ req(input$id_col)
-    if( input$control_type == "Epic") { controls <- c("Hypo-Methylated Control", "Hyper-Methylated Control") }
-    else {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
+    controls <- get_controls()
     
-    if (input$bal_type == "Simple Disperse") {
-      plates <- simple_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
-    } else if (input$bal_type == "Grouped Disperse") {
+    if (input$bal_type == "Grouped Disperse") {
       plates <- grouped_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
+    } else if (input$bal_type == "Simple Disperse") {
+       plates <- simple_disperse(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
     } else {
       plates <- plate_randomize(get_data(), controls, input$seed, input$id_col, input$m_by_cols, input$empty_wells)
     }
-    plates
+    if (is.na(input$num_plates)) {
+      return (plates)
+    } else {
+      plates %>% filter(Plate <= input$num_plates) %>% return
+    }
   })
   
   get_manifest_m <- reactive({
     ### TODO: Get this from UI
     col_vals <- c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood') #SHINY get default values from user.
-    format_manifest(get_plates(), input$m_by_cols, input$add_cols, col_vals)
+    # col_vals for WGS, this is a quick hack for now... try to do better in the future!
+    # col_vals <- c('Specimen type' = 'Saliva', Instrument = 'NovaSeq') #SHINY get default values from user.
+    if (! is.null(input$template)) {
+      col_names <- import_file(input$template$datapath, col_names = TRUE, input$tmp_delim, input$tmp_quote, input$tmp_skip) %>%
+        colnames
+    } else {
+      col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate", "Well", "Sample Well", "Species",
+                     "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
+                     "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
+    }
+    updateSelectInput(session, "m_id_col_1", choices = col_names)
+    format_manifest(get_plates(), input$m_by_cols, input$add_cols, col_vals, col_names) 
   })
   
   get_layout_types <- function(plates, m_by_cols) {
@@ -137,7 +167,7 @@ manifest_server <- function(input, output, session) {
     types <-  plates %>% unite(Sample_Type, m_by_cols) %>%
       arrange(Sample_Type) %>% pull(Sample_Type) %>% unique() %>% intersect(all_types, .)
     
-    type_names <- types %>% str_replace("NA.*", "Control") %>% str_replace_all("_", " ")
+    type_names <- types # %>% str_replace("NA.*", "Control") %>% str_replace_all("_", " ")
     col_nums <- 1:length(types)
     
     dt_opts <- list(dom = 't', columnDefs = list(list(visible = FALSE, targets = col_nums - 1)))
@@ -161,7 +191,7 @@ manifest_server <- function(input, output, session) {
     content = function(con) {
       params <- lst(input = input,
                     info = get_info(get_data(), get_controls(), 96, 8),
-                    num_plates = info$total_plates,
+                    num_plates = ifelse(is.na(input$num_plates), info$total_plates, input$num_plates),
                     plate_layouts = 1:num_plates %>% set_names %>%
                       map(~ get_layout(get_plates(), input$m_by_cols, ., input$show_ids)),
                     layout_key = get_layout_key(get_plates(), input$m_by_cols),

@@ -6,53 +6,69 @@ data_server <- function(input, output, session) {
     if (!is.null(input$files) &&
         !is.na(excel_format(input$files$datapath))) {
       updateSelectInput(session, "sheet", choices = excel_sheets(input$files$datapath))
+      # updateSelectInput(session, "clean_col_1", choices = c("None", colnames(get_pheno())))
       return(TRUE)
     }
     updateSelectInput(session, "sheet", choices = character(0))
     return(FALSE)
   })
   outputOptions(output, 'fileExcel', suspendWhenHidden = FALSE)
+  vals <- reactiveValues(data = NULL)
   
-  # output$uploadUI <- renderUI({ req(input$files)
-  #   nTabs = nrow(input$files)
-  #   myTabs <- map(input$files$name, tabPanel)
-  #   # myTabs = lapply(paste('Tab', 1: nTabs), tabPanel)
-  #   do.call(tabsetPanel, myTabs)
-  # })
+  observe({ req(input$files)
+    output$ui_clean_cols <- renderUI({ req(input$files)
+      tagList(
+        varSelectInput("clean_cols", "Column(s) to Number", multiple = TRUE, data = vals$data),
+        p("Select Columns to remove all non-digits and convert to number."),
+        varSelectInput("na_cols", "NA to Missing", multiple = TRUE, data = vals$data),
+        p('Select Columns to convert "NA" to "Missing"'))
+    })
+  })
+  
+  # Move this to a utilities file?
+  import_file <<- function(file, col_names, delim, quote, skip) {
+    if (is.na(excel_format(file))) {
+      file <- read_delim(file, col_names = col_names,
+                          delim = delim, quote = quote, skip = skip)
+    } else {
+      file <- read_excel(file, skip = skip, col_names = col_names)
+    }
+    file
+  }
   
   # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
-  read_pheno <<- reactive({
-    # return()
-    if (is.na(excel_format(input$files$datapath))) {
-      pheno <- read_delim(input$files$datapath, col_names = input$col_names,
-                          delim = input$delim, quote = input$quote, skip = input$skip)
-    } else {
-      pheno <- read_excel( input$files$datapath, skip = input$skip, col_names = input$col_names)
-    }
+  read_pheno <<- reactive({ req(input$files)
+    pheno <- import_file(input$files$datapath, input$col_names, input$delim, input$quote, input$skip)
     updateSelectInput(session, "d_id_col", choices = colnames(pheno))
-    map(list("align_cols", "clean_cols", "filter_cols", "by_cols"),
+    updateSelectInput(session, "m_id_col_2", choices = colnames(pheno))
+    map(list("align_cols", "filter_cols", "by_cols"),
         ~ updateCheckboxGroupInput(session, .x, choices = set_names(colnames(pheno))))
-    return(pheno)
+    vals$data <- pheno
   })
   
   # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
   get_pheno <<- reactive({ req(input$files)
+    # pheno <- read_pheno()
     pheno <- read_pheno()
     req(input$d_id_col %in% colnames(pheno))
     pheno %>% rename("Sample ID" = input$d_id_col) %>%
       mutate(`Sample ID` = as.character(`Sample ID`))
   })
   
-  clean_pheno <- reactive({
-    # clean_cols <- c("Avg [ng/ul]", "% CV")
-    clean <- function(s) { str_remove_all(s, "[^[:digit:].]") %>% as.double() }
+  clean_pheno <<- reactive({
+    make_numeric <- function(x) { str_remove_all(x, "[^[:digit:].]") %>% as.double() }
+    na_to_missing <- function(x) { ifelse(is.na(x), "Missing", x) }
+    
     get_pheno() %>%
-      mutate_at(input$clean_cols, clean)
+      when(length(input$clean_cols) < 1 ~ .,
+           mutate(., across(as.character(input$clean_cols), make_numeric))) %>%
+      when(length(input$na_cols) < 1 ~ .,
+           mutate(., across(as.character(input$na_cols), na_to_missing)))
   })
   
   filter_pheno <- reactive({
     filters <- c("") #SHINY use paste to create this from user input
-    clean_pheno() %>% filter(!!! parse_exprs(filters))
+    clean_pheno() # %>% filter(!!! parse_exprs(filters))
   })
   
   get_manifest_d <- reactive({ req(input$by_cols)
@@ -71,7 +87,6 @@ data_server <- function(input, output, session) {
   output$pheno <- renderTable({ createTableOutput(get_pheno()) })
   output$cleaned_pheno <- renderTable({ createTableOutput(clean_pheno()) })
   output$filtered_pheno <- renderTable({ createTableOutput(filter_pheno()) })
-  output$manifest <- renderTable({ createTableOutput(get_manifest_d()) })
   
   output$d_downloadManifest <- downloadHandler(
     filename = function() {

@@ -1,7 +1,3 @@
-col_names <- c("Row", "Group ID", "Sample ID", "Plate Barcode or Number", "Plate", "Well", "Sample Well", "Species",
-               "Gender (M/F/U)", "Volume (ul)", "Concentration (ng/ul)", "OD 260/280", "Tissue Source",
-               "Extraction Method", "Ethnicity", "Parent 1 ID", "Parent 2 ID", "Replicate(s) ID", "Cancer Sample (Y/N)")
-
 add_column_na <- function(d, col_names) {
   add_cols <- col_names %>% setdiff(colnames(d))
   if(length(add_cols) != 0) d[add_cols] <- NA
@@ -46,7 +42,7 @@ get_info <- function(samples, controls, plate_size, chip_size) {
     total_controls = total_plates * n_controls)
 }
 
-format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
+format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL, col_names) {
   samples_w_wells <- samples %>%
     group_split(Plate) %>%
     map(~ mutate(., Well = get_wells(1, transpose = TRUE) %>% head(n()))) %>%
@@ -54,9 +50,26 @@ format_manifest <- function(samples, by_cols, add_cols, col_vals = NULL) {
   
   samples_w_wells %>%
     mutate(!!! col_vals) %>%
+    # Rename Plate and Well for WGS template, dirty hack
+    # mutate("Sample Plate" = Plate, "Sample well" = Well) %>%
     # mutate("Gender (M/F/U)" = Gender) %>%
     add_column_na(col_names) %>%
     select(union(col_names, c(all_of(by_cols), add_cols)))
+}
+
+add_controls <- function(samples, controls, info) {
+  if(length(controls) == 0) {
+    plated_samples <- samples %>%
+      mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
+      group_split(Plate) %>%
+      bind_rows
+  } else {
+    plated_samples <- samples %>%
+      mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
+      group_split(Plate) %>% imap(~ disperse(.x, tibble("Sample ID" = controls, Plate = .y))) %>%
+      bind_rows
+  }
+  plated_samples
 }
 
 simple_disperse <- function(samples, controls, seed, id_col, by_cols, empty_wells) {
@@ -78,11 +91,8 @@ simple_disperse <- function(samples, controls, seed, id_col, by_cols, empty_well
     dispersed_samples <- randomized_samples %>%
       reduce(disperse) %>% bind_rows(empty)
   }
-
-  plated_samples <- dispersed_samples %>%
-    mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
-    group_split(Plate) %>% imap(~ disperse(.x, tibble("Sample ID" = controls, Plate = .y))) %>%
-    bind_rows
+  
+  plated_samples <- add_controls(dispersed_samples, controls, info)
 
   plated_samples %>%
     mutate(Chip = rep(1:info$total_chips, each = info$chip_size, length.out = n())) %>%
@@ -107,24 +117,25 @@ grouped_disperse <- function(samples, controls, seed, id_col, by_cols, empty_wel
   ### TODO: get plate dimensions from UI
   info <- get_info(samples, controls, 96, 8)
   
+  id_name <- "Sample ID"
+  # id_name for WGS, this is a quick hack for now we should do this better in the future.
+  # id_name <- "Subject_ID"
+  
   randomized_samples <- samples %>% sample_n(n()) %>%
-    mutate("Sample ID" = as.character(!!! syms(id_col))) %>%
+    mutate(!! id_name := as.character(!!! syms(id_col))) %>%
     # Make this a setting... set NA to missing
     # replace_na(as.list(rep("Missing", length(by_cols))) %>% set_names(by_cols)) %>%
     col_split(by_cols) %>% multi_reduce(disperse)
   
   if (info$empty_wells > 0 & empty_wells == "Use Controls") {
-    empty <- tibble("Sample ID" = rep(controls, length.out = info$empty_wells))
+    empty <- tibble(!! id_name := rep(controls, length.out = info$empty_wells))
     dispersed_samples <- disperse(randomized_samples, empty)
   } else {
-    empty <- tibble("Sample ID" = rep("Empty", length.out = info$empty_wells))
+    empty <- tibble(!! id_name := rep("Empty", length.out = info$empty_wells))
     dispersed_samples <-bind_rows(randomized_samples, empty)
   }
   
-  plated_samples <- dispersed_samples %>%
-    mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
-    group_split(Plate) %>% imap(~ disperse(.x, tibble("Sample ID" = controls, Plate = .y))) %>%
-    bind_rows
+  plated_samples <- add_controls(dispersed_samples, controls, info)
   
   plated_samples %>%
     mutate(Chip = rep(1:info$total_chips, each = info$chip_size, length.out = n())) %>%
@@ -149,7 +160,10 @@ plate_randomize <- function(samples, controls, seed, id_col, by_cols, empty_well
     dispersed_samples <-bind_rows(randomized_samples, empty)
   }
   
-  dispersed_samples %>% mutate(Plate = rep(1:info$total_plates, each = info$samples_per_plate, length.out = n())) %>%
-    group_split(Plate) %>% imap(~ disperse(.x, tibble("Sample ID" = controls, Plate = .y))) %>%
+  plated_samples <- add_controls(dispersed_samples, controls, info)
+
+  plated_samples %>%
+    mutate(Chip = rep(1:info$total_chips, each = info$chip_size, length.out = n())) %>%
+    group_split(Chip) %>% map(~ sample_n(., n())) %>%
     bind_rows
 }

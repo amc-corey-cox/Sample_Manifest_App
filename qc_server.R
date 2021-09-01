@@ -135,8 +135,10 @@ qc_server <- function(input, output, session) {
     mylist(
       list(
         # Fname = as.character(input$Fname),
+        # Fname = as.character("/home/corey/Documents/Sample_Manifest_App/new_InputData/Nasal_RNA_Final_for_plots_072021.csv"),
         filterMissing = input$filterMissing,
         includeBaltimore = input$includeBaltimore,
+        includeBarbados = input$includeBarbados,
         includeBrazil = input$includeBrazil,
         includeChicago = input$includeChicago,
         includeDenver = input$includeDenver,
