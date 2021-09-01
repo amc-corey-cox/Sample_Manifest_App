@@ -68,6 +68,22 @@ upset(all_input, c("Nasal Methylation - Epic", "Nasal Methylation - Allergy", "N
 ```
 
 ```{r}
+balt_nasal_dna <- all_input %>%
+  filter(site == "Baltimore", `Sample ID` > 10203057)
+
+upset(balt_nasal_dna, c("Nasal Methylation - Epic", "Nasal Methylation - Allergy", "Nasal RNAseq", "MEGA"),
+      base_annotations = list('Subjects with Omics' = intersection_size(counts = TRUE, mapping = aes(fill = site))),
+      annotations = list("Case Status" = ggplot(mapping = aes(fill = Asthma)) +
+                           geom_bar(stat='count', position='fill') +
+                           scale_y_continuous(labels=scales::percent_format()) +
+                           scale_fill_manual(values=c("light green", "dark green")) +
+                           ylab("Case/Control Status"),
+                         "Age Category" = ggplot(mapping = aes(fill = Age_category)) +
+                           geom_bar(stat='count', position='fill') +
+                           scale_y_continuous(labels=scales::percent_format()) +
+                           scale_fill_manual(values=c("light blue", "dark blue")) +
+                           ylab("Age Category")),
+      width_ratio=0.1)
 
 ```
 
