@@ -51,21 +51,30 @@ UTHRESH_TOTAL_Qubit_ug = Inf
 # inputDir
 # nameDate <- "062520"
 
-nameDate <- "091720"
-inputDir <- "./InputData2/"
-inputDir <- if_else(filterMissing, "./FilteredData/", "./InputData2/")
+# nameDate <- "091720"
+# inputDir <- "./InputData2/"
+# inputDir <- if_else(filterMissing, "./FilteredData/", "./InputData2/")
+# 
+# if(CellType == "PBMC" & DNAorRNA == "DNA"){
+#   Fname = paste0(inputDir,"PBMC_DNA_Final_for_plots_",nameDate,".csv")
+# }else if(CellType == "PBMC" & DNAorRNA == "RNA"){
+#   Fname = paste0(inputDir,"PBMC_RNA_Final_for_plots_",nameDate,".csv")
+# }else if(CellType == "Nasal" & DNAorRNA == "DNA"){
+#   Fname = paste0(inputDir,"Nasal_DNA_Final_for_plots_",nameDate,".csv")
+# }else if(CellType == "Nasal" & DNAorRNA == "RNA"){
+#   Fname = paste0(inputDir,"Nasal_RNA_Final_for_plots_",nameDate,".csv")
+# }
+# 
 
-if(CellType == "PBMC" & DNAorRNA == "DNA"){
-  Fname = paste0(inputDir,"PBMC_DNA_Final_for_plots_",nameDate,".csv")
-}else if(CellType == "PBMC" & DNAorRNA == "RNA"){
-  Fname = paste0(inputDir,"PBMC_RNA_Final_for_plots_",nameDate,".csv")
-}else if(CellType == "Nasal" & DNAorRNA == "DNA"){
-  Fname = paste0(inputDir,"Nasal_DNA_Final_for_plots_",nameDate,".csv")
-}else if(CellType == "Nasal" & DNAorRNA == "RNA"){
-  Fname = paste0(inputDir,"Nasal_RNA_Final_for_plots_",nameDate,".csv")
-}
+### Load the environment variables... use for testing.
+# load("env_list.RData", envir = globalenv())
+# list2env(env_list, globalenv())
 
+# Fname <- "/home/corey/Documents/Sample_Manifest_App/new_InputData/Nasal_RNA_Final_for_plots_072121_passed_not_run_v2.csv"
 
+# Fname <- "/home/corey/Documents/Sample_Manifest_App/new_InputData/Nasal_RNA_Final_for_plots_072121_not_run_w_recovered.csv"
+
+Fname <- "/home/corey/Documents/Sample_Manifest_App/new_InputData/Nasal_RNA_Final_for_plots_072121_not_run_w_recovered_plate_1_removed_v2.csv"
 
 F1 <- read.table(Fname, sep = ",", header=T, na.strings = c("",NA))
 # F1_all <- read.table(Fname, sep = ",", header=T, na.strings = c("",NA))
@@ -83,11 +92,24 @@ if("Agilent_RINe" %in% names(F1)){
 F1$Asthma <- as.character(F1$Asthma)
 F1$Gender <- as.character(F1$Gender)
 
+# F1$Slide_status <- as.character(F1$Slide_status) %>% toupper() %>% as.factor()
 
 
 # Subset data given choice of subset
-sitesToInclude <- c("Baltimore", "Brazil", "Chicago", "Denver", "Nigeria", "Washington DC")[c(includeBaltimore,includeBrazil,includeChicago,includeDenver,includeNigeria,includeWashington_DC)]
+sitesToInclude <- c("Baltimore", "Barbados", "Brazil", "Chicago", "Denver", "Nigeria", "Washington DC")[c(includeBaltimore,includeBarbados,includeBrazil,includeChicago,includeDenver,includeNigeria,includeWashington_DC)]
 F1 <- subset(F1, F1$site %in% sitesToInclude)
+
+### Quick hacks to fix some missing phenotypes to get a quick answer...
+# F1 <- F1 %>%
+#   mutate(Age_category = replace_na(Age_category, "Adult"),
+#          Asthma = replace_na(Asthma, 2),
+#          # Asthma = recode(Asthma, "0" = 2),
+#          Gender = replace_na(Gender, 2))
+# F1 <- F1 %>%
+#   mutate(Slide_status = toupper(Slide_status) %>% as.factor(),
+#          Agilent_RINe = replace_na(0))
+F1$Slide_status <- as.character(F1$Slide_status) %>% toupper() %>% as.factor()
+F1 <- F1 %>% filter(! is.na(Agilent_RINe))
 
 AgeToInclude <- c("Adult", "Child")[c(includeAdult, includeChild)]
 F1 <- subset(F1, F1$Age_category %in% AgeToInclude)
@@ -102,14 +124,13 @@ F1 <- subset(F1, F1$Gender %in% GenderToInclude)
 
 # Select meaningful columns
 dataFocus <- as_tibble(F1)
-dataFocusSelect <-  dataFocus %>% select(starts_with("TOTAL_Nanodrop_ug"), 
-                                         starts_with("TOTAL_Qubit_ug"), 
-                                         starts_with("Nanodrop_260_280"), 
-                                         starts_with("Agilent_DIN"), 
-                                         starts_with("Agilent_RINe"),
-                                         starts_with("PBMC_cellcounts"),
-                                         starts_with("Slide_status")
-                                         )
+dataFocusSelect <-  dataFocus %>%
+  select(TOTAL_Nanodrop_ug, TOTAL_Qubit_ug, Nanodrop_260_280, 
+         starts_with("Agilent_DIN"), 
+         starts_with("Agilent_RINe"),
+         starts_with("PBMC_cellcounts"), Slide_status,
+         starts_with("Recoverable")
+         )
 
 
 
@@ -286,7 +307,14 @@ thresholdPlotter <- function(inputData, var1, var2, thresh1_lower, thresh1_upper
         }
       }
     }
+    if("Recoverable" %in% names(inputData)) {
+      if(inputData$Recoverable[q]) {
+        inputData$aesCol[q] <- "Manual Pass"
+      }
+    }
   }
+  
+
   
   inputData_old <- inputData
   
@@ -669,6 +697,11 @@ for(q in 1:nrow(pre_summaryTable_old)){
           }
         }
       }
+    }
+  }
+  if("Recoverable" %in% names(pre_summaryTable_old)) {
+    if(pre_summaryTable_old$Recoverable[q]) {
+      pre_summaryTable$pass_all[q] <- "MANUAL PASS"
     }
   }
 }
