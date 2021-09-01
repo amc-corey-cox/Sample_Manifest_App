@@ -1,11 +1,20 @@
+# CAAPA2 Sample files
+FilteredData
+InputData
+InputData2
+new_InputData
+MEGA_Epic_Custom_InputData
+
+# Image Files of the App
+App_images
+
+# .RData files - intermediate files
+savePassed.RData
+savePlots.RData
+env_list.RData
+
+# R project and data files
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
-FilteredData
-InputData
-savePassed.RData
-savePlots.RData
-env_list.RData
-InputData2
-App_images
