@@ -77,12 +77,15 @@ subject_list <- all_data %>%
       Conc_Nanodrop_nasal >= 40 ~ "Nasal",
       TRUE ~ "Failed"),
     Epic_Sample = case_when(
+      Site %in% c("Brazil", "Barbados", "Nigeria") ~ "",
       MEGA_Sample != "Nasal" & TOTAL_Qubit_ug_nasal >= 0.5 ~ "",
       MEGA_Sample != "Nasal" & TOTAL_Nanodrop_ug_nasal >= 0.6 ~ "",
       MEGA_Sample == "Nasal" & TOTAL_Qubit_ug_nasal >= 0.7 ~ "",
+      MEGA_Sample == "Nasal" & TOTAL_Nanodrop_ug_nasal >= 0.8 ~ "",
       TRUE ~ "Failed"
     ),
     Custom_Sample = case_when(
+      Site %in% c("Brazil", "Barbados", "Nigeria") ~ "",
       MEGA_Sample != "Nasal" & TOTAL_Qubit_ug_nasal >= 1.0 ~ "",
       MEGA_Sample == "Nasal" & TOTAL_Qubit_ug_nasal >= 1.2 ~ "",
       TRUE ~ "Failed"
@@ -94,6 +97,7 @@ subject_list <- all_data %>%
       TRUE ~ ""
     ),
     Epic_Status_Info = case_when(
+      Site %in% c("Brazil", "Barbados", "Nigeria") ~ "Excluded",
       MEGA_Sample == "Nasal" & (is.na(TOTAL_Qubit_ug_nasal) | TOTAL_Qubit_ug_nasal < 0.2) ~ "Missing Nasal Qubit",
       TOTAL_Qubit_ug_nasal < 0 & TOTAL_Nanodrop_ug_nasal < 0.6 ~ "Missing Nasal Qubit, Nanodrop < 0.6 ug",
       TOTAL_Nanodrop_ug_nasal == -5 ~ "Nasal Nanodrop == -5, did sample fail?",
@@ -101,6 +105,8 @@ subject_list <- all_data %>%
       TRUE ~ ""
     ),
     Custom_Status_Info = case_when(
+      Site %in% c("Brazil", "Barbados", "Nigeria") ~ "Excluded",
+      Epic_Sample == "Failed" ~ "",
       TOTAL_Qubit_ug_nasal < 1.0 ~ "Qubit Nasal < 1 ug",
       TOTAL_Qubit_ug_nasal < 1.2 ~ "Qubit Nasal < 1.2 ug and MEGA sample is Nasal DNA",
       TRUE ~ ""
