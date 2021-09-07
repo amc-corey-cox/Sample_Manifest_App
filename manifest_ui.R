@@ -1,9 +1,9 @@
 manifest_panel <- div(
   style = "min-width: 240px; max-width: 240px;",
   wellPanel( # sidebar
-    conditionalPanel(condition = "input.mtabs == 'Passed QC'",
-      radioButtons("dataSource", "Data Source", choices = c("QC", "Data"), selected = "QC"),
-      actionButton("getPassedSamples", "Load Passed Samples")),
+    # conditionalPanel(condition = "input.mtabs == 'Passed QC'",
+    #   radioButtons("dataSource", "Data Source", choices = c("QC", "Data"), selected = "QC"),
+    #   actionButton("getPassedSamples", "Load Passed Samples")),
     # textOutput("debug"),
     conditionalPanel(condition = "input.mtabs == 'Manifest'",
       fileInput("template", "Upload Manifest Template", multiple = FALSE,

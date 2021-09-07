@@ -17,7 +17,7 @@ manifest_server <- function(input, output, session) {
   })
   outputOptions(output, 'fileExcel', suspendWhenHidden = FALSE)
   
-  observeEvent(input$getPassedSamples, {
+  observe({ req(input$files)
     field_names <- colnames(get_data())
     updateActionButton(session, "getPassedSamples", label = "Reload Passed Samples")
     output$manifest_controls <- renderUI({
@@ -66,11 +66,15 @@ manifest_server <- function(input, output, session) {
         })
   })
   
-  get_data <- eventReactive(input$getPassedSamples, {
-    if (input$dataSource == "Data") { return (clean_pheno()) }
-    load("savePassed.RData")
-    forCorey
-  })
+  # Use for returning from qc or data portion
+  # get_data <- eventReactive(input$getPassedSamples, {
+  #   if (input$dataSource == "Data") { return (clean_pheno()) }
+  #   load("savePassed.RData")
+  #   forCorey
+  # })
+  
+  # Get data only from data portion of app
+  get_data <- reactive({ filter_pheno() })
   
   get_controls <- reactive({
     if(input$control_type == "MEGA") {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
