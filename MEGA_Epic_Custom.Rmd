@@ -87,7 +87,9 @@ subject_list <- all_data %>%
     Custom_Sample = case_when(
       Site %in% c("Brazil", "Barbados", "Nigeria") ~ "",
       MEGA_Sample != "Nasal" & TOTAL_Qubit_ug_nasal >= 1.0 ~ "",
+      MEGA_Sample != "Nasal" & TOTAL_Nanodrop_ug_nasal >= 1.1 ~ "",
       MEGA_Sample == "Nasal" & TOTAL_Qubit_ug_nasal >= 1.2 ~ "",
+      MEGA_Sample == "Nasal" & TOTAL_Nanodrop_ug_nasal >= 1.3 ~ "",
       TRUE ~ "Failed"
     ),
     MEGA_Status_Info = case_when(
@@ -108,7 +110,7 @@ subject_list <- all_data %>%
       Site %in% c("Brazil", "Barbados", "Nigeria") ~ "Excluded",
       Epic_Sample == "Failed" ~ "",
       TOTAL_Qubit_ug_nasal < 1.0 ~ "Qubit Nasal < 1 ug",
-      TOTAL_Qubit_ug_nasal < 1.2 ~ "Qubit Nasal < 1.2 ug and MEGA sample is Nasal DNA",
+      MEGA_Sample == "Nasal" & TOTAL_Qubit_ug_nasal < 1.2 ~ "Qubit Nasal < 1.2 ug and MEGA sample is Nasal DNA",
       TRUE ~ ""
     )
   )
