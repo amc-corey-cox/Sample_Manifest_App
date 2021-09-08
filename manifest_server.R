@@ -187,8 +187,13 @@ manifest_server <- function(input, output, session) {
                   backgroundColor = bg_color, color = "#FFFFFF")
   }
   
-  output$passedQC <- DT::renderDataTable({ get_data() }, options = list(pageLength = 96))
-  output$manifestTable <- DT::renderDataTable({ get_manifest_m() }, options = list(pageLength = 96))
+  createTableOutput_m <- function(df) {
+    if (input$m_disp == "head") { return(head(df)) }
+    return(df)
+  }
+  
+  output$passedQC <- DT::renderDataTable({ get_data() %>% createTableOutput_m() }, options = list(pageLength = 96))
+  output$manifestTable <- DT::renderDataTable({ get_manifest_m() %>% createTableOutput_m() }, options = list(pageLength = 96))
   output$downloadManifest <- downloadHandler(
     filename = function() { str_c('Manifest-', Sys.Date(), '.xlsx') },
     content = function(con) { write.xlsx(get_manifest_m(), file = con, showNA = FALSE) })
