@@ -1,6 +1,7 @@
 source("manifest_functions.R", local = TRUE)
 
 my_colors <- c(stepped2(), stepped3(4), "#DDDDDD")
+unique_n <- function(x) { unique(x) %>% length() }
 
 manifest_server <- function(input, output, session) {
   output$templateUploaded <- reactive({ return(!is.null(input$template)) })
@@ -19,6 +20,7 @@ manifest_server <- function(input, output, session) {
   
   observe({ req(input$files)
     field_names <- colnames(get_data())
+    default_cols <- get_default_cols()
     updateActionButton(session, "getPassedSamples", label = "Reload Passed Samples")
     output$manifest_controls <- renderUI({
       tagList(
@@ -31,21 +33,16 @@ manifest_server <- function(input, output, session) {
           radioButtons("bal_type", "Balance Type", choices = c("Grouped Disperse", "Simple Disperse", "Randomize")),
           selectInput("id_col", "Sample ID Column", choices = field_names),
           checkboxGroupInput("m_by_cols", "Balance by Columns", choices = set_names(field_names),
-                         select = c("site", "Age_category", "Asthma")),
-          # checkboxGroupInput("m_by_cols", "Balance by Columns", choices = set_names(field_names)),
+                             select = default_cols),
           checkboxGroupInput("add_cols", "Add to Manifest", choices = set_names(field_names)),
           # selectInput("col_vals", "Select Values", choices = c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood'),
           #             selected = c("Species", "Tissue Source")),
           numericInput("seed", "Set Random Seed", value = 44),
           numericInput("num_plates", "Number of Plates", value = NA_integer_),
-          # downloadButton("downloadManifest", "Download Manifest"),
-          # downloadButton("manifestReport", "Download Manifest Report")
         ),
-        # conditionalPanel("input.mtabs == 'Layout Facets'",
-        #     checkboxGroupInput("layout_cols", "Balance by Columns", choices = set_names(field_names)))
         conditionalPanel("input.mtabs == 'Layout Facets'",
           checkboxGroupInput("layout_cols", "Facet Columns", choices = set_names(field_names),
-            select = c("site", "Age_category", "Asthma", "Gender")))
+            select = default_cols))
       )
     })
   })
@@ -98,6 +95,13 @@ manifest_server <- function(input, output, session) {
     } else {
       plates %>% filter(Plate <= input$num_plates) %>% return
     }
+  })
+  
+  get_default_cols <- reactive({
+    get_data() %>%
+      select(where(~ 1 < unique_n(.x) && unique_n(.x) < 5)) %>%
+      select(matches(c("Site", "Age", "Asthma", "Gender", "Status", "Race", "Ethnicity", "Symptom")), everything()) %>%
+      select(1:4) %>% colnames()
   })
   
   get_manifest_m <- reactive({
