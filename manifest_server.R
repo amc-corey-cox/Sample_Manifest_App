@@ -38,8 +38,8 @@ manifest_server <- function(input, output, session) {
           #             selected = c("Species", "Tissue Source")),
           numericInput("seed", "Set Random Seed", value = 44),
           numericInput("num_plates", "Number of Plates", value = NA_integer_),
-          downloadButton("downloadManifest", "Download Manifest"),
-          downloadButton("manifestReport", "Download Manifest Report")
+          # downloadButton("downloadManifest", "Download Manifest"),
+          # downloadButton("manifestReport", "Download Manifest Report")
         ),
         # conditionalPanel("input.mtabs == 'Layout Facets'",
         #     checkboxGroupInput("layout_cols", "Balance by Columns", choices = set_names(field_names)))
@@ -186,12 +186,12 @@ manifest_server <- function(input, output, session) {
   output$passedQC <- DT::renderDataTable({ get_data() }, options = list(pageLength = 96))
   output$manifestTable <- DT::renderDataTable({ get_manifest_m() }, options = list(pageLength = 96))
   output$downloadManifest <- downloadHandler(
-    filename = function() { paste('Manifest-', Sys.Date(), '.xlsx', sep='') },
+    filename = function() { str_c('Manifest-', Sys.Date(), '.xlsx') },
     content = function(con) { write.xlsx(get_manifest_m(), file = con, showNA = FALSE) })
   
   output$manifestReport <- downloadHandler(
     # For PDF output, change this to "report.pdf"
-    filename = function() { paste('Manifest_Report-', Sys.Date(), '.html', sep='') },
+    filename = function() { str_c('Manifest_Report-', Sys.Date(), '.html') },
     content = function(con) {
       params <- lst(input = input,
                     info = get_info(get_data(), get_controls(), 96, 8),

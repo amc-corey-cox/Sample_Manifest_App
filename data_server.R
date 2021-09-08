@@ -37,7 +37,7 @@ data_server <- function(input, output, session) {
   }
   
   # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
-  read_pheno <<- reactive({ req(input$files)
+  read_pheno <- reactive({ req(input$files)
     pheno <- import_file(input$files$datapath, input$col_names, input$delim, input$quote, input$skip)
     updateSelectInput(session, "d_id_col", choices = colnames(pheno))
     updateSelectInput(session, "m_id_col_2", choices = colnames(pheno))
@@ -47,7 +47,7 @@ data_server <- function(input, output, session) {
   })
   
   # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
-  get_pheno <<- reactive({ req(input$files)
+  get_pheno <- reactive({ req(input$files)
     # pheno <- read_pheno()
     pheno <- read_pheno()
     req(input$d_id_col %in% colnames(pheno))
@@ -55,7 +55,7 @@ data_server <- function(input, output, session) {
       mutate(`Sample ID` = as.character(`Sample ID`))
   })
   
-  clean_pheno <<- reactive({
+  clean_pheno <- reactive({
     make_numeric <- function(x) { str_remove_all(x, "[^[:digit:].]") %>% as.double() }
     na_to_missing <- function(x) { ifelse(is.na(x), "Missing", x) }
     
@@ -67,20 +67,12 @@ data_server <- function(input, output, session) {
   })
   
   filter_pheno <<- reactive({
-    filters <- c("") #SHINY use paste to create this from user input
+    # filters <- c("") #SHINY use paste to create this from user input
     clean_pheno() # %>% filter(!!! parse_exprs(filters))
   })
   
-  get_manifest_d <- reactive({ req(input$by_cols)
-    #RSHINY Get this from UI
-    controls <- c("Hypo-methylated Control", "Hyper-methylated control")
-    by_cols <- input$by_cols
-    col_vals = c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood') #SHINY get default values from user.
-    create_manifest(filter_pheno(), controls, by_cols, col_vals)
-  })
-  
   createTableOutput <- function(df) {
-    if (input$disp == "head") { return(head(df)) }
+    if (input$d_disp == "head") { return(head(df)) }
     return(df)
   }
   
@@ -88,14 +80,9 @@ data_server <- function(input, output, session) {
   output$cleaned_pheno <- renderTable({ createTableOutput(clean_pheno()) })
   output$filtered_pheno <- renderTable({ createTableOutput(filter_pheno()) })
   
-  output$d_downloadManifest <- downloadHandler(
-    filename = function() {
-      paste('data-', Sys.Date(), '.xlsx', sep='')
-    },
-    content = function(con) {
-      write.xlsx(get_manifest_d(), file = con, showNA = FALSE)
-    }
-  )
+  output$downloadCleanData <- downloadHandler(
+    filename = function() { str_c('cleaned_and_filtered_data-', Sys.Date(), '.tsv') },
+    content = function(con) { write_tsv(filter_pheno(), file = con) })
   
   output$debug <- renderText({ # req(input$fileUploaded)
     input$d_id_col

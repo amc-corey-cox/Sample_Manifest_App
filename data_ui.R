@@ -52,8 +52,8 @@ data_ui <- tabPanel(titlePanel("Import Data"),
   splitLayout(
     cellWidths = c("55%", "20%", "25%"),
     titlePanel("Load and Prepare Data"),
-    radioButtons("disp", "Display", selected = "head", inline = TRUE, choices = c(Head = "head", All = "all")),
-    downloadButton("d_downloadManifest", "Get Clean/Filtered Data"),
+    radioButtons("d_disp", "Display", selected = "head", inline = TRUE, choices = c(Head = "head", All = "all")),
+    downloadButton("downloadCleanData", "Get Clean and Filtered Data"),
     tags$style(type = 'text/css', "#disp { margin-top: 15px; }"),
-    tags$style(type = 'text/css', "#d_downloadManifest { margin-top: 20px; }")),
+    tags$style(type = 'text/css', "#downloadCleanData { margin-top: 20px; }")),
   flowLayout(data_panel, data_tabs))
