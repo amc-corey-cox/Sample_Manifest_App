@@ -26,7 +26,7 @@ data_server <- function(input, output, session) {
   })
   
   # Move this to a utilities file?
-  import_file <<- function(file, col_names, delim, quote, skip) {
+  import_file <- function(file, col_names, delim, quote, skip) {
     if (is.na(excel_format(file))) {
       file <- read_delim(file, col_names = col_names,
                           delim = delim, quote = quote, skip = skip)
