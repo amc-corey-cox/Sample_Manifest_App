@@ -34,6 +34,8 @@ manifest_server <- function(input, output, session) {
           selectInput("id_col", "Sample ID Column", choices = field_names),
           checkboxGroupInput("m_by_cols", "Balance by Columns", choices = set_names(field_names),
                              select = default_cols),
+          actionButton("add_all", "Add All Columns to Manifest"),
+          tags$style(type = 'text/css', "#add_all { margin-bottom: 15px; }"),
           checkboxGroupInput("add_cols", "Add to Manifest", choices = set_names(field_names)),
           # selectInput("col_vals", "Select Values", choices = c(Species = 'Homo sapiens', `Tissue Source` = 'Whole Blood'),
           #             selected = c("Species", "Tissue Source")),
@@ -45,6 +47,10 @@ manifest_server <- function(input, output, session) {
             select = default_cols))
       )
     })
+  })
+  
+  observeEvent(input$add_all, {
+    updateSelectInput(session, "add_cols", selected = get_data() %>% colnames())
   })
   
   output$facet_UI <- renderUI ({
