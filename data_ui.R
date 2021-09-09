@@ -44,8 +44,8 @@ data_tabs <- div(
   tabsetPanel(id = "d_tabs", type = "pills",
     # tabPanel( "Phenotype", uiOutput('uploadUI') ),
     tabPanel("Phenotype", tableOutput("pheno")),
-    tabPanel("Cleanup", tableOutput("cleaned_pheno")),
-    tabPanel("Filter", tableOutput("filtered_pheno"))
+    tabPanel("Cleanup", tableOutput("cleaned_pheno"))
+    # tabPanel("Filter", tableOutput("filtered_pheno"))
 ))
 
 data_ui <- tabPanel(titlePanel("Import Data"),
@@ -53,7 +53,7 @@ data_ui <- tabPanel(titlePanel("Import Data"),
     cellWidths = c("55%", "20%", "25%"),
     titlePanel("Load and Prepare Data"),
     radioButtons("d_disp", "Display", selected = "head", inline = TRUE, choices = c(Head = "head", All = "all")),
-    downloadButton("downloadCleanData", "Get Clean and Filtered Data"),
+    downloadButton("downloadCleanData", "Get Cleaned Data"),
     tags$style(type = 'text/css', "#d_disp { margin-top: 15px; }"),
     tags$style(type = 'text/css', "#downloadCleanData { margin-top: 20px; }")),
   flowLayout(data_panel, data_tabs))

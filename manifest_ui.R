@@ -26,7 +26,7 @@ manifest_tabs <- div(
   style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
   tabsetPanel(
     id = "mtabs", type = "pills",
-    tabPanel( "Passed QC", br(), DT::dataTableOutput("passedQC") ),
+    tabPanel( "Imported Data", br(), DT::dataTableOutput("passedQC") ),
     tabPanel( "Manifest", br(), DT::dataTableOutput("manifestTable")),
     tabPanel( "Plate Layout", br(),
       div(DT::dataTableOutput("layoutKey"), style = "font-size:80%"),
