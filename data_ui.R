@@ -54,6 +54,6 @@ data_ui <- tabPanel(titlePanel("Import Data"),
     titlePanel("Load and Prepare Data"),
     radioButtons("d_disp", "Display", selected = "head", inline = TRUE, choices = c(Head = "head", All = "all")),
     downloadButton("downloadCleanData", "Get Clean and Filtered Data"),
-    tags$style(type = 'text/css', "#disp { margin-top: 15px; }"),
+    tags$style(type = 'text/css', "#d_disp { margin-top: 15px; }"),
     tags$style(type = 'text/css', "#downloadCleanData { margin-top: 20px; }")),
   flowLayout(data_panel, data_tabs))

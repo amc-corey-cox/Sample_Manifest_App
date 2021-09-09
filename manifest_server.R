@@ -100,7 +100,7 @@ manifest_server <- function(input, output, session) {
   get_default_cols <- reactive({
     get_data() %>%
       select(where(~ 1 < unique_n(.x) && unique_n(.x) < 5)) %>%
-      select(matches(c("Site", "Age", "Asthma", "Gender", "Status", "Race", "Ethnicity", "Symptom")), everything()) %>%
+      relocate(matches(c("Site", "Age", "Asthma", "Gender", "Status", "Race", "Ethnicity", "Symptom"))) %>%
       select(1:4) %>% colnames()
   })
   
