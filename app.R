@@ -13,6 +13,7 @@ library(DT)
 library(table1)
 
 library(xlsx)
+library(writexl)
 library(readxl)
 
 
