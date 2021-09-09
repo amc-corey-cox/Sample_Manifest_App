@@ -1,0 +1,11 @@
+name: sample_manifest_app_io
+title:
+username:
+account: amc-corey-cox
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4621782
+bundleId: 5016876
+url: https://amc-corey-cox.shinyapps.io/sample_manifest_app_io/
+when: 1631210644.18808
+lastSyncTime: 1631210644.18813
