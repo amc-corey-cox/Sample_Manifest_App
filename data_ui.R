@@ -1,6 +1,6 @@
 upload_ctrl <- fileInput("files", "Upload Phenotype File", multiple = FALSE,
   # fileInput("files", "Upload Phenotype File", multiple = TRUE,
-  accept = c(".csv", ".xls", ".xlsx", "text/csv",
+  accept = c(".tsv", ".csv", ".xls", ".xlsx", "text/csv",
              "text/comma-separated-values,text/plain",
              "application/vnd.ms-excel",
              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))

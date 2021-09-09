@@ -202,7 +202,7 @@ manifest_server <- function(input, output, session) {
   output$manifestTable <- DT::renderDataTable({ get_manifest_m() %>% createTableOutput_m() }, options = list(pageLength = 96))
   output$downloadManifest <- downloadHandler(
     filename = function() { str_c('Manifest-', Sys.Date(), '.xlsx') },
-    content = function(con) { write.xlsx(get_manifest_m(), file = con, showNA = FALSE) })
+    content = function(con) { write_xlsx(get_manifest_m(), path = con) })
   
   output$manifestReport <- downloadHandler(
     # For PDF output, change this to "report.pdf"
