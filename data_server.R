@@ -66,7 +66,17 @@ data_server <- function(input, output, session) {
            mutate(., across(as.character(input$na_cols), na_to_missing)))
   })
   
-  filter_pheno <<- reactive({
+
+  observeEvent(input$getFilterColumns, {
+    showModal(modalDialog(
+      title = "This is a dialog to get columns to filter",
+      "I'm not sure yet what this will look like.",
+      easyClose = TRUE,
+      footer = NULL
+    ))
+  })
+  
+  filter_pheno <- reactive({
     # filters <- c("") #SHINY use paste to create this from user input
     clean_pheno() # %>% filter(!!! parse_exprs(filters))
   })
