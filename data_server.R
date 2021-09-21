@@ -52,7 +52,7 @@ data_server <- function(input, output, session) {
     pheno <- read_pheno()
     req(input$d_id_col %in% colnames(pheno))
     pheno %>%
-      possibly(rename, otherwise = .)(`Sample ID_old` = `Sample ID`) %>%
+      possibly(rename, otherwise = ., )("Sample ID_old" = "Sample ID") %>%
       rename("Sample ID" = input$d_id_col) %>%
       mutate(`Sample ID` = as.character(`Sample ID`))
   })
