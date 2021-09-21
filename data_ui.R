@@ -48,8 +48,8 @@ data_tabs <- div(
   tabsetPanel(id = "d_tabs", type = "pills",
     # tabPanel( "Phenotype", uiOutput('uploadUI') ),
     tabPanel("Phenotype", tableOutput("pheno")),
-    tabPanel("Cleanup", tableOutput("cleaned_pheno"))
-    # tabPanel("Filter", tableOutput("filtered_pheno"))
+    tabPanel("Cleanup", tableOutput("cleaned_pheno")),
+    tabPanel("Filter", tableOutput("filtered_pheno"))
 ))
 
 data_ui <- tabPanel(titlePanel("Import Data"),
