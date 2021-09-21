@@ -71,7 +71,7 @@ data_server <- function(input, output, session) {
 
   observeEvent(input$getFilterColumns, {
     showModal(modalDialog(
-      title = "This is a dialog to get columns to filter",
+      title = "Select columns for Filtering",
       "I'm not sure yet what this will look like.",
       easyClose = TRUE,
       footer = NULL
