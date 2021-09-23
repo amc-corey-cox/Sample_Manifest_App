@@ -39,8 +39,8 @@ data_panel <- div(
       uiOutput("ui_clean_cols")),
     conditionalPanel(
       condition = "output.fileUploaded && input.d_tabs == 'Filter'",
-      actionButton("getFilterColumns", "Select Filter Columns")
-    )
+      actionButton("getFilterColumns", "Select Filter Columns"),
+      uiOutput("ui_filter_cols"))
 ))
 
 data_tabs <- div(
