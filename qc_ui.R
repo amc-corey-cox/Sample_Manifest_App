@@ -207,8 +207,8 @@ qc_panel <- div(
     tags$h4("Missing Data"),
     checkboxInput("filterMissing", "Filter Missing", FALSE),
     
-    actionButton("runScript", "Run QC & Generate Plots"),
-    downloadButton("qcReport", "Download QC Report"),
+    # actionButton("runScript", "Run QC & Generate Plots"),
+    # downloadButton("qcReport", "Download QC Report"),
     tags$h6(
       "Email Corey.Cox@CUAnschutz.edu to report bugs or provide suggestions"
 )))
@@ -216,7 +216,8 @@ qc_panel <- div(
   ### TODO: Move figures and tables to live figures within app
 qc_main <- div(
   style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
-    titlePanel("Quality Control Figures"),
+    # titlePanel("Quality Control Figures"),
+    plotOutput("cGram_new", width = "auto", height = "520px"),
     plotOutput("cGram", width = "auto", height = "520px"),
     uiOutput("mytable"),
     fluidRow(
@@ -278,9 +279,13 @@ qc_main <- div(
 qc_ui <- tabPanel(
   titlePanel("QC Metrics"),
   splitLayout(
-    cellWidths = c("60%", "20%"),
+    cellWidths = c("40%", "20%", "20%"),
     titlePanel("Sample Quality Control"),
-    downloadButton("qc_download", "Get QC Report"),
-    tags$style(type = 'text/css', "#qc_download { margin-top: 20px; }")
+    actionButton("runScript", "Run QC & Generate Plots"),
+    tags$style(type = 'text/css', "#runScript { margin-top: 20px; }"),
+    downloadButton("qcReport", "Download QC Report"),
+    tags$style(type = 'text/css', "#qcReport { margin-top: 20px; }")
+    # downloadButton("qc_download", "Get QC Report"),
+    # tags$style(type = 'text/css', "#qc_download { margin-top: 20px; }")
   ),
   flowLayout(qc_panel, qc_main))
