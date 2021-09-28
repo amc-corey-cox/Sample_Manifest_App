@@ -1,3 +1,5 @@
+source("qc_functions.R", local = TRUE)
+
 qc_server <- function(input, output, session) { 
   mylist <- reactiveVal()
   observeEvent(
@@ -198,6 +200,11 @@ qc_server <- function(input, output, session) {
     save(env_list, file = "env_list.RData")
     source("./source_plots_shiny.R", local = list2env(mylist()))
     load("savePlots.RData")
+    
+    # output$cGram_new <- renderPlot({
+    #   ggplot(filter_pheno()) +
+    #     geom_point(aes = aes())
+    # })
     
     output$cGram <- renderPlot({
       cGram
