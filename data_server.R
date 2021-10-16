@@ -51,7 +51,9 @@ data_server <- function(input, output, session) {
     # pheno <- read_pheno()
     pheno <- read_pheno()
     req(input$d_id_col %in% colnames(pheno))
-    pheno %>% rename("Sample ID" = input$d_id_col) %>%
+    pheno %>%
+      possibly(rename, otherwise = ., )("Sample ID_old" = "Sample ID") %>%
+      rename("Sample ID" = input$d_id_col) %>%
       mutate(`Sample ID` = as.character(`Sample ID`))
   })
   
@@ -65,10 +67,51 @@ data_server <- function(input, output, session) {
       when(length(input$na_cols) < 1 ~ .,
            mutate(., across(as.character(input$na_cols), na_to_missing)))
   })
+
+  observeEvent(input$getFilterColumns, {
+    # filter_choices <- colnames(clean_pheno())
+    showModal(modalDialog(
+      checkboxGroupInput("filter_cols", "Select Columns for Filtering", choices = colnames(clean_pheno())),
+      actionButton("filterSelectedColumns", "Filter Selected"),
+      easyClose = TRUE,
+      footer = NULL
+    ))
+  })
   
-  filter_pheno <<- reactive({
-    # filters <- c("") #SHINY use paste to create this from user input
-    clean_pheno() # %>% filter(!!! parse_exprs(filters))
+  filter_names <- reactive({ req(input$filter_cols)
+    input$filter_cols %>%
+      map(~ str_c("filt_", make.names(.))) %>%
+      set_names(input$filter_cols, .)
+    })
+  
+  has_filter <- reactive({ req(input$filter_cols)
+    filter_names() %>% names() %>%
+      map( ~ pluck(input, .) %>% length() > 0) %>%
+      reduce(all)
+  })
+  
+  observeEvent(input$filterSelectedColumns , {
+    output$ui_filter_cols <- renderUI({
+      tagList(
+        filter_names() %>%
+          imap(~ checkboxGroupInput( inputId = .y, label = .x,
+            choices = pull(clean_pheno(), .x) %>% unique(),
+            selected = pull(clean_pheno(), .x) %>% unique())),
+      )
+    })
+    removeModal()
+  })
+  
+  
+  filter_pheno <<- reactive({ req(filter_names)
+    if (! has_filter()) { clean_pheno() }
+    else {
+    data_filters <- filter_names() %>%
+      imap(~ str_c(.x, " %in% c(", str_c('"', pluck(input, .y), '"', collapse = ', '), ")")) %>%
+      unlist()
+    clean_pheno() %>%
+      filter_(data_filters)
+    }
   })
   
   createTableOutput <- function(df) {

@@ -1,6 +1,6 @@
 upload_ctrl <- fileInput("files", "Upload Phenotype File", multiple = FALSE,
   # fileInput("files", "Upload Phenotype File", multiple = TRUE,
-  accept = c(".tsv", ".csv", ".xls", ".xlsx", "text/csv",
+  accept = c(".csv", ".xls", ".xlsx", "text/csv",
              "text/comma-separated-values,text/plain",
              "application/vnd.ms-excel",
              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
@@ -36,16 +36,20 @@ data_panel <- div(
     conditionalPanel(condition = "input.d_tabs == 'Phenotype' || input.d_tabs == 'Cleanup'", id_ctrl),
     conditionalPanel(
       condition = "input.d_tabs == 'Cleanup'",
-      uiOutput("ui_clean_cols")
-)))
+      uiOutput("ui_clean_cols")),
+    conditionalPanel(
+      condition = "output.fileUploaded && input.d_tabs == 'Filter'",
+      actionButton("getFilterColumns", "Select Filter Columns"),
+      uiOutput("ui_filter_cols"))
+))
 
 data_tabs <- div(
   style="display:inline-block; min-width: 400px; padding-left:25px; padding-top:10px",
   tabsetPanel(id = "d_tabs", type = "pills",
     # tabPanel( "Phenotype", uiOutput('uploadUI') ),
     tabPanel("Phenotype", tableOutput("pheno")),
-    tabPanel("Cleanup", tableOutput("cleaned_pheno"))
-    # tabPanel("Filter", tableOutput("filtered_pheno"))
+    tabPanel("Cleanup", tableOutput("cleaned_pheno")),
+    tabPanel("Filter", tableOutput("filtered_pheno"))
 ))
 
 data_ui <- tabPanel(titlePanel("Import Data"),
