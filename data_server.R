@@ -36,7 +36,6 @@ data_server <- function(input, output, session) {
     file
   }
   
-  # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
   read_pheno <- reactive({ req(input$files)
     pheno <- import_file(input$files$datapath, input$col_names, input$delim, input$quote, input$skip)
     updateSelectInput(session, "d_id_col", choices = colnames(pheno))
@@ -46,7 +45,6 @@ data_server <- function(input, output, session) {
     vals$data <- pheno
   })
   
-  # Have to put these in global environment for now. Rewrite using moduleServer and nested servers.
   get_pheno <- reactive({ req(input$files)
     # pheno <- read_pheno()
     pheno <- read_pheno()
@@ -102,8 +100,7 @@ data_server <- function(input, output, session) {
     removeModal()
   })
   
-  
-  filter_pheno <<- reactive({ req(filter_names)
+  filter_pheno <- reactive({ req(filter_names)
     if (! has_filter()) { clean_pheno() }
     else {
     data_filters <- filter_names() %>%
@@ -112,6 +109,11 @@ data_server <- function(input, output, session) {
     clean_pheno() %>%
       filter_(data_filters)
     }
+  })
+  
+  # Have to put this in global environment for now. Rewrite using moduleServer and nested servers.
+  pheno <<- reactive({
+    if(isTruthy(input$filter_cols)) { filter_pheno() } else { clean_pheno() }
   })
   
   createTableOutput <- function(df) {

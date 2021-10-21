@@ -77,7 +77,7 @@ manifest_server <- function(input, output, session) {
   # })
   
   # Get data only from data portion of app
-  get_data <- reactive({ filter_pheno() })
+  get_data <- reactive({ pheno() })
   
   get_controls <- reactive({
     if(input$control_type == "MEGA") {controls <- c("HapMap Control", "HapMap Control", "HapMap Control", "Duplicate", "Duplicate") }
